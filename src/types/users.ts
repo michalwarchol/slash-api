@@ -1,0 +1,5 @@
+export enum UserType {
+  STUDENT = 'STUDENT',
+  STUDENT_PREMIUM = 'STUDENT_PREMIUM',
+  EDUCATOR = 'EDUCATOR',
+}
