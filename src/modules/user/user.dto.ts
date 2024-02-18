@@ -3,19 +3,34 @@ import { UserType } from 'src/types/users';
 
 export class UserDataResponse {
   _id: Types.ObjectId;
+  email: string;
   first_name: string;
   last_name: string;
   avatar: string;
   type: UserType;
 }
 
-export class UserCreateInput {
+export class SignUpInput {
   first_name: string;
   last_name: string;
   email: string;
   password: string;
   type: string;
 }
+
+export type SignUpResponse = {
+  user: UserDataResponse;
+  access_token: string;
+};
+
+export type SignInInput = {
+  email: string;
+  password: string;
+};
+
+export type SignInResponse = {
+  access_token: string;
+};
 
 type CourseProgress = {
   course_id: string;

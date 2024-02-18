@@ -7,7 +7,6 @@ export type TSingleValidatorResponse = {
 
 export type TValidationOptions = Array<{
   field: string;
-  value: any;
   validators: Array<Validator>;
   message?: string;
   additionalProps?: Object;

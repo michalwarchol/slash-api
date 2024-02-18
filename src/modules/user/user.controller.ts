@@ -1,18 +1,34 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { UserCreateInput, UserDataResponse, UserResponse } from './user.dto';
-import { UsersService } from './user.service';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
+import { SignUpInput, UserDataResponse, SignUpResponse, SignInInput, SignInResponse } from './user.dto';
 import { TMutationResult } from 'src/types/responses';
+import { AuthGuard } from 'src/guards/authGuard';
+
+import { UsersService } from './user.service';
 
 @Controller('users')
-export class CatsController {
+export class UserController {
   constructor(private usersService: UsersService) {}
-  @Get(':id')
-  getUserData(@Param('id') id: string): Promise<UserDataResponse> {
-    return this.usersService.getUserData(id);
+  @Post('signup')
+  signUp(@Body() body: SignUpInput): Promise<TMutationResult<SignUpResponse>> {
+    return this.usersService.signUp(body);
   }
 
-  @Post()
-  createUser(@Body() body: UserCreateInput): Promise<TMutationResult<UserResponse>> {
-    return this.usersService.createUser(body);
+  @Post('signin')
+  signIn(@Body() body: SignInInput): Promise<TMutationResult<SignInResponse>> {
+    return this.usersService.signIn(body);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  me(@Request() req) {
+    return this.usersService.getUserData(req.user._id);
   }
 }
