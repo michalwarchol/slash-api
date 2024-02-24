@@ -103,7 +103,10 @@ export class UsersService {
         _id: user._id,
         type: user.type,
       },
-      { secret: this.configService.get('jwt.secret') },
+      {
+        secret: this.configService.get('jwt.secret'),
+        expiresIn: this.configService.get('jwt.expiresIn'),
+      },
     );
 
     return {
@@ -161,7 +164,10 @@ export class UsersService {
         _id: user._id,
         type: user.type,
       },
-      { secret: this.configService.get('jwt.secret') },
+      {
+        secret: this.configService.get('jwt.secret'),
+        expiresIn: this.configService.get('jwt.expiresIn'),
+      },
     );
 
     return {
