@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   app:
     container_name: nestjs
@@ -7,7 +7,6 @@ services:
     command: npm run start:dev
     volumes:
       - ./:/usr/src/app
-      - /usr/src/app/node_modules
     ports:
       - ${APP_PORT}:4000
     depends_on:
@@ -19,4 +18,4 @@ services:
     volumes:
       - ./data:/data/db
     ports:
-      - "27017:27017"
+      - '27017:27017'
