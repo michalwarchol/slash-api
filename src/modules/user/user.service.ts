@@ -21,6 +21,8 @@ import {
   SignInInput,
   SignInResponse,
 } from './user.dto';
+import Dictionary from 'src/types/dictionary';
+import { UserType } from 'src/types/users';
 
 @Injectable()
 export class UsersService {
@@ -176,5 +178,25 @@ export class UsersService {
         access_token: accessToken,
       },
     };
+  }
+
+  userRoles(locale: string): Dictionary {
+    const values = {
+      pl: {
+        STUDENT: 'Student',
+        EDUCATOR: 'Edukator',
+      },
+      en: {
+        STUDENT: 'Student',
+        EDUCATOR: 'Educator',
+      },
+    };
+
+    const localeValues = values[locale] || values.en;
+
+    return Object.keys(localeValues).map((key) => ({
+      name: key,
+      value: localeValues[key],
+    }));
   }
 }

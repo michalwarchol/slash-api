@@ -7,7 +7,13 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { SignUpInput, UserDataResponse, SignUpResponse, SignInInput, SignInResponse } from './user.dto';
+import {
+  SignUpInput,
+  UserDataResponse,
+  SignUpResponse,
+  SignInInput,
+  SignInResponse,
+} from './user.dto';
 import { TMutationResult } from 'src/types/responses';
 import { AuthGuard } from 'src/guards/authGuard';
 
@@ -30,5 +36,10 @@ export class UserController {
   @UseGuards(AuthGuard)
   me(@Request() req) {
     return this.usersService.getUserData(req.user._id);
+  }
+
+  @Get('roles')
+  roles(@Request() req) {
+    return this.usersService.userRoles(req.headers.lang || 'en');
   }
 }
