@@ -40,7 +40,6 @@ export class UserController {
 
   @Get('roles')
   roles(@Request() req) {
-    console.log(req.headers);
     return this.usersService.userRoles(req.headers.lang || 'en');
   }
 }
