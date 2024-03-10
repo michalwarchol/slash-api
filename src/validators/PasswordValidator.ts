@@ -8,7 +8,7 @@ class PasswordValidator extends Validator {
     return {
       isValid: passwordRegex.test(value),
       message:
-        'Password should be at least 6 characters long, and have at least 1 number, 1 big and 1 small letter.',
+        'validPassword',
     };
   }
 }

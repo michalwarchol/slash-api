@@ -7,7 +7,7 @@ class IsEmailValidator extends Validator {
 
     return {
       isValid: emailRegex.test(value),
-      message: 'It is not a valid email.',
+      message: 'validEmail',
     };
   }
 }
