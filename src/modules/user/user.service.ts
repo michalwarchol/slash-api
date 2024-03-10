@@ -52,7 +52,7 @@ export class UsersService {
       return {
         success: false,
         errors: {
-          email: 'User already exists',
+          email: 'emailExists',
         },
       };
     }
@@ -146,7 +146,7 @@ export class UsersService {
       return {
         success: false,
         errors: {
-          credentials: 'Given credentials are invalid',
+          credentials: 'credentialsInvalid',
         },
       };
     }
@@ -156,7 +156,7 @@ export class UsersService {
       return {
         success: false,
         errors: {
-          credentials: 'Given credentials are invalid',
+          credentials: 'credentialsInvalid',
         },
       };
     }
