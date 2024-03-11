@@ -114,7 +114,14 @@ export class UsersService {
     return {
       success: true,
       result: {
-        user,
+        user: {
+          _id: user._id,
+          avatar: user.avatar,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          type: user.type,
+        },
         access_token: accessToken,
       },
     };
@@ -175,6 +182,14 @@ export class UsersService {
     return {
       success: true,
       result: {
+        user: {
+          _id: user._id,
+          avatar: user.avatar,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          type: user.type,
+        },
         access_token: accessToken,
       },
     };

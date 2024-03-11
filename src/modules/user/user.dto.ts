@@ -29,6 +29,7 @@ export type SignInInput = {
 };
 
 export type SignInResponse = {
+  user: UserDataResponse;
   access_token: string;
 };
 
