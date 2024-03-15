@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Param,
   Post,
   Request,
   UseGuards,
@@ -35,7 +34,7 @@ export class UserController {
   @Get('me')
   @UseGuards(AuthGuard)
   me(@Request() req) {
-    return this.usersService.getUserData(req.user._id);
+    return this.usersService.getUserData(req.user.id);
   }
 
   @Get('roles')

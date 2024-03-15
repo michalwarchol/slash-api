@@ -1,7 +1,11 @@
 export default () => ({
   port: parseInt(process.env.APP_PORT, 10) || 4000,
   database: {
-    uri: process.env.MONGODB_URI,
+    host: process.env.MYSQL_HOST,
+    port: process.env.MYSQL_PORT,
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    name: process.env.MYSQL_DATABASE,
   },
   jwt: {
     secret: process.env.JWT_SECRET,

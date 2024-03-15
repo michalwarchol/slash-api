@@ -1,5 +1,3 @@
-import { Types } from 'mongoose';
-
 export enum UserType {
   STUDENT = 'STUDENT',
   STUDENT_PREMIUM = 'STUDENT_PREMIUM',
@@ -7,6 +5,6 @@ export enum UserType {
 }
 
 export type TUserTokenPayload = {
-  _id: Types.ObjectId;
+  id: string;
   type: UserType;
 };
