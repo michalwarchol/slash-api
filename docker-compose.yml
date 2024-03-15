@@ -12,10 +12,32 @@ services:
     depends_on:
       - db
   db:
-    container_name: mongo
-    image: mongo
+    container_name: mysql_slash
+    image: mysql:5.7 # Możesz użyć inną wersję MySQL, jeśli jest taka potrzeba
     restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
-      - ./data:/data/db
+      - ./data:/var/lib/mysql
     ports:
-      - '27017:27017'
+      - '3306:3306'
+    command:
+      [
+        'mysqld',
+        '--character-set-server=utf8mb4',
+        '--collation-server=utf8mb4_unicode_ci',
+      ]
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - '8080:80'
+    depends_on:
+      - db

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Model, Types } from 'mongoose';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 
 import isEmpty from 'src/utils/isEmpty';
@@ -13,7 +13,7 @@ import PasswordValidator from 'src/validators/PasswordValidator';
 import RequiredValidator from 'src/validators/RequiredValidator';
 import IsEmailValidator from 'src/validators/IsEmailValidator';
 
-import { User } from './user.schema';
+import { User } from './user.entity';
 import {
   SignUpInput,
   UserDataResponse,
@@ -22,32 +22,28 @@ import {
   SignInResponse,
 } from './user.dto';
 import Dictionary from 'src/types/dictionary';
-import { UserType } from 'src/types/users';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
 
   async getUserData(id: string): Promise<UserDataResponse> {
-    return this.userModel.findById(new Types.ObjectId(id), {
-      _id: 1,
-      email: 1,
-      first_name: 1,
-      last_name: 1,
-      avatar: 1,
-      type: 1,
+    return this.userRepository.findOne({
+      where: { id },
+      select: ['id', 'email', 'firstName', 'lastName', 'avatar', 'type'],
     });
   }
 
   async signUp(input: SignUpInput): Promise<TMutationResult<SignUpResponse>> {
-    const userExists = await this.userModel.findOne(
-      { email: input.email },
-      { _id: 1 },
-    );
+    const userExists = await this.userRepository.findOne({
+      where: { email: input.email },
+      select: ['id'],
+    });
     if (userExists) {
       return {
         success: false,
@@ -59,11 +55,11 @@ export class UsersService {
 
     const validators: TValidationOptions = [
       {
-        field: 'first_name',
+        field: 'firstName',
         validators: [RequiredValidator],
       },
       {
-        field: 'last_name',
+        field: 'lastName',
         validators: [RequiredValidator],
       },
       {
@@ -91,18 +87,19 @@ export class UsersService {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(input.password, salt);
 
-    const user = await this.userModel.create({
-      _id: new Types.ObjectId(),
+    const user = this.userRepository.create({
       email: input.email,
-      first_name: input.first_name,
-      last_name: input.last_name,
+      firstName: input.firstName,
+      lastName: input.lastName,
       type: input.type,
       password: hashedPassword,
     });
 
+    this.userRepository.save(user);
+
     const accessToken = this.jwtService.sign(
       {
-        _id: user._id,
+        id: user.id,
         type: user.type,
       },
       {
@@ -115,14 +112,14 @@ export class UsersService {
       success: true,
       result: {
         user: {
-          _id: user._id,
+          id: user.id,
           avatar: user.avatar,
           email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           type: user.type,
         },
-        access_token: accessToken,
+        accessToken: accessToken,
       },
     };
   }
@@ -147,7 +144,9 @@ export class UsersService {
       };
     }
 
-    const user = await this.userModel.findOne({ email: input.email });
+    const user = await this.userRepository.findOne({
+      where: { email: input.email },
+    });
 
     if (!user) {
       return {
@@ -170,7 +169,7 @@ export class UsersService {
 
     const accessToken = this.jwtService.sign(
       {
-        _id: user._id,
+        id: user.id,
         type: user.type,
       },
       {
@@ -183,14 +182,14 @@ export class UsersService {
       success: true,
       result: {
         user: {
-          _id: user._id,
+          id: user.id,
           avatar: user.avatar,
           email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           type: user.type,
         },
-        access_token: accessToken,
+        accessToken: accessToken,
       },
     };
   }

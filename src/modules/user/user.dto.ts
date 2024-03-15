@@ -1,26 +1,25 @@
-import { Types } from 'mongoose';
 import { UserType } from 'src/types/users';
 
 export class UserDataResponse {
-  _id: Types.ObjectId;
+  id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   avatar: string;
   type: UserType;
 }
 
 export class SignUpInput {
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
-  type: string;
+  type: UserType;
 }
 
 export type SignUpResponse = {
   user: UserDataResponse;
-  access_token: string;
+  accessToken: string;
 };
 
 export type SignInInput = {
@@ -30,25 +29,25 @@ export type SignInInput = {
 
 export type SignInResponse = {
   user: UserDataResponse;
-  access_token: string;
+  accessToken: string;
 };
 
 type CourseProgress = {
-  course_id: string;
+  courseId: string;
   progress: number;
 };
 
 export class UserResponse {
-  _id: Types.ObjectId;
-  first_name: string;
-  last_name: string;
+  id: string;
+  firstName: string;
+  lastName: string;
   email: string;
   permissions: string[];
   avatar?: string;
   type: UserType;
-  last_billing_date?: Date;
-  next_billing_date?: Date;
-  saved_courses?: string[];
-  courses_in_progress?: CourseProgress[];
+  lastBillingDate?: Date;
+  nextBillingDate?: Date;
+  savedCourses?: string[];
+  coursesInProgress?: CourseProgress[];
   courses?: string[];
 }
