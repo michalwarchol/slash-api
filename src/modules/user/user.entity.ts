@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany, ManyToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  OneToMany,
+  ManyToMany,
+} from 'typeorm';
 import { UserType } from 'src/types/users';
 import { Course } from '../course/course.entity';
 
@@ -16,14 +22,14 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column({ nullable: true })
   avatar: string;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: UserType,
   })
   type: UserType;
