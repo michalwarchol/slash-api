@@ -164,4 +164,34 @@ export class CoursesService {
       },
     };
   }
+
+  async deleteCourse(
+    userId: string,
+    id: string,
+  ): Promise<TMutationResult<boolean>> {
+    const course = await this.courseRepository.findOne({
+      where: { id },
+      relations: {
+        creator: true,
+      },
+      select: { creator: { id: true } },
+    });
+
+    if (!course) {
+      return {
+        success: false,
+        result: null,
+      };
+    }
+
+    if (course.creator.id !== userId) {
+      throw new ForbiddenException();
+    }
+    const result = await this.courseRepository.delete({ id });
+
+    return {
+      success: true,
+      result: result.affected === 1,
+    };
+  }
 }
