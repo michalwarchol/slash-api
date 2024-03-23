@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -69,5 +70,16 @@ export class CourseController {
     @Body() body: UpdateCourseInput,
   ): Promise<TMutationResult<CourseResponse>> {
     return this.coursesService.updateCourse(req.user.id, body);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  deleteCourse(
+    @Request() req,
+    @Param('id') id: string
+  ): Promise<TMutationResult<boolean>> {
+    return this.coursesService.deleteCourse(req.user.id, id);
   }
 }
