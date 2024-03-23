@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import {
   SignUpInput,
-  UserDataResponse,
   SignUpResponse,
   SignInInput,
   SignInResponse,

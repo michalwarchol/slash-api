@@ -35,7 +35,6 @@ export class UsersService {
   async getUserData(id: string): Promise<UserDataResponse> {
     return this.userRepository.findOne({
       where: { id },
-      select: ['id', 'email', 'firstName', 'lastName', 'avatar', 'type'],
     });
   }
 
@@ -95,12 +94,12 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    this.userRepository.save(user);
+    const newUser = await this.userRepository.save(user);
 
     const accessToken = this.jwtService.sign(
       {
-        id: user.id,
-        type: user.type,
+        id: newUser.id,
+        type: newUser.type,
       },
       {
         secret: this.configService.get('jwt.secret'),
@@ -112,12 +111,12 @@ export class UsersService {
       success: true,
       result: {
         user: {
-          id: user.id,
-          avatar: user.avatar,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          type: user.type,
+          id: newUser.id,
+          avatar: newUser.avatar,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          type: newUser.type,
         },
         accessToken: accessToken,
       },
@@ -146,6 +145,15 @@ export class UsersService {
 
     const user = await this.userRepository.findOne({
       where: { email: input.email },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        avatar: true,
+        type: true,
+        password: true,
+      },
     });
 
     if (!user) {
