@@ -1,5 +1,15 @@
-import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from "typeorm";
-import { User } from "../user/user.entity";
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  JoinTable,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { User } from '../user/user.entity';
 
 @Entity()
 export class CourseType {
@@ -45,14 +55,17 @@ export class Course {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column('varchar', { length: 250 })
+  name: string;
+
   @Column('mediumtext')
   description: string;
 
   @ManyToOne(() => User, (user) => user.courses)
-  creator: string;
+  creator: User;
 
   @ManyToOne(() => CourseSubType, (courseSubType) => courseSubType.courses)
-  type: string;
+  type: CourseSubType;
 
   @OneToMany(() => CourseVideo, (courseVideo) => courseVideo.course)
   courseVideos: CourseVideo[];
@@ -73,7 +86,6 @@ export class CourseStatistics {
   @Column('int')
   views: number;
 }
-
 
 @Entity()
 export class CourseVideo {
@@ -98,8 +110,7 @@ export class CourseVideo {
 
   @ManyToOne(() => Course, (course) => course.courseVideos)
   course: Course;
-};
-
+}
 
 @Entity()
 export class CourseMaterials {
@@ -112,6 +123,9 @@ export class CourseMaterials {
   @Column('varchar')
   link: string;
 
+  @Column('varchar', { length: 10 })
+  type: string;
+
   @ManyToOne(() => Course, (course) => course.courseMaterials)
   course: Course;
-};
+}

@@ -2,13 +2,16 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import configuration from './config/configuration';
 
 import { UsersModule } from 'src/modules/user/user.module';
-import { PassportModule } from '@nestjs/passport';
+import { CoursesModule } from 'src/modules/course/course.module';
+import { RolesGuard } from './guards/rolesGuard';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -32,6 +35,7 @@ import { PassportModule } from '@nestjs/passport';
       inject: [ConfigService],
     }),
     UsersModule,
+    CoursesModule,
     PassportModule,
     JwtModule.register({
       secret: configuration().jwt.secret,
