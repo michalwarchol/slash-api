@@ -18,6 +18,7 @@ import {
   CourseResponse,
   UpdateCourseInput,
   FullCourseResponse,
+  CourseTypesResponse,
 } from './course.dto';
 import { CoursesService } from './course.service';
 import { Roles } from 'src/guards/roles.decorator';
@@ -29,6 +30,13 @@ import { Course } from './course.entity';
 @Controller('courses')
 export class CourseController {
   constructor(private coursesService: CoursesService) {}
+
+  @Get('types')
+  courseTypes(
+    @Request() req,
+  ): Promise<CourseTypesResponse> {
+    return this.coursesService.getCourseTypes(req.headers.lang || 'en',);
+  }
 
   @Get('search')
   searchCourses(
