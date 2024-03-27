@@ -17,8 +17,9 @@ import {
   CreateCourseInput,
   FullCourseResponse,
   UpdateCourseInput,
+  CourseTypesResponse,
 } from './course.dto';
-import { Course, CourseSubType } from './course.entity';
+import { Course, CourseSubType, CourseType } from './course.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import withPercentage from 'src/utils/withPercentage';
 
@@ -27,7 +28,34 @@ export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private courseRepository: Repository<Course>,
+
+    @InjectRepository(CourseType)
+    private courseTypeRepository: Repository<CourseType>,
   ) {}
+
+  async getCourseTypes(lang: string): Promise<CourseTypesResponse> {
+    const langMap = {
+      en: 'valueEn',
+      pl: 'valuePl',
+    };
+
+    const types = await this.courseTypeRepository.find({
+      relations: {
+        subTypes: true,
+      },
+    });
+
+    return types.map((type) => ({
+      id: type.id,
+      name: type.name,
+      value: type[langMap[lang]],
+      subTypes: type.subTypes.map((subType) => ({
+        id: subType.id,
+        name: subType.name,
+        value: subType[langMap[lang]],
+      })),
+    }));
+  }
 
   async createCourse(
     creatorId: string,
@@ -59,7 +87,7 @@ export class CoursesService {
       creator: { id: creatorId } as User,
     });
 
-    this.courseRepository.save(newCourse);
+    await this.courseRepository.save(newCourse);
 
     return {
       success: true,
