@@ -1,12 +1,10 @@
 import {
   Column,
   Entity,
-  JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   OneToMany,
-  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
@@ -79,15 +77,6 @@ export class Course {
 }
 
 @Entity()
-export class CourseStatistics {
-  @PrimaryGeneratedColumn()
-  id: string;
-
-  @Column('int')
-  views: number;
-}
-
-@Entity()
 export class CourseVideo {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -104,9 +93,11 @@ export class CourseVideo {
   @Column('varchar')
   thumbnailLink: string;
 
-  @OneToOne(() => CourseStatistics)
-  @JoinColumn()
-  statistics: CourseStatistics;
+  @Column('int')
+  duration: number;
+
+  @Column('int')
+  views: number;
 
   @ManyToOne(() => Course, (course) => course.courseVideos)
   course: Course;
@@ -125,6 +116,9 @@ export class CourseMaterials {
 
   @Column('varchar', { length: 10 })
   type: string;
+
+  @Column('int')
+  size: number;
 
   @ManyToOne(() => Course, (course) => course.courseMaterials)
   course: Course;
