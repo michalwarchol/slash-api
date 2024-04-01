@@ -18,6 +18,7 @@ import {
   FullCourseResponse,
   UpdateCourseInput,
   CourseTypesResponse,
+  CourseUserStatistics,
 } from './course.dto';
 import { Course, CourseSubType, CourseType } from './course.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
@@ -144,7 +145,9 @@ export class CoursesService {
         courseMaterials: true,
         courseVideos: true,
         creator: true,
-        type: true,
+        type: {
+          mainType: true,
+        },
       },
     });
 
@@ -152,7 +155,14 @@ export class CoursesService {
       throw new NotFoundException();
     }
 
-    return course;
+    const likesCountQuery =
+      'SELECT count(*) AS count FROM course_students_user WHERE courseId = ?';
+    const likesCount = await this.courseRepository.query(likesCountQuery, [id]);
+
+    return {
+      ...course,
+      likesCount: parseInt(likesCount[0].count),
+    };
   }
 
   async search(
@@ -221,5 +231,49 @@ export class CoursesService {
       success: true,
       result: result.affected === 1,
     };
+  }
+
+  async getCourseUserStatistics(
+    courseId: string,
+    userId: string,
+  ): Promise<CourseUserStatistics> {
+    const query = `SELECT * FROM course_students_user WHERE courseId = ? AND userId = ? LIMIT 1`;
+    const result = await this.courseRepository.query(query, [courseId, userId]);
+
+    return {
+      isLiked: result.length > 0,
+    };
+  }
+
+  async likeOrDislikeCourse(
+    courseId: string,
+    userId: string,
+    isLike: boolean,
+  ): Promise<TMutationResult<boolean>> {
+    let query = '';
+    if (isLike) {
+      query =
+        'INSERT INTO course_students_user (courseId, userId) VALUES (?, ?)';
+    } else {
+      query =
+        'DELETE FROM course_students_user WHERE courseId = ? AND userId = ?';
+    }
+
+    try {
+      const result = await this.courseRepository.query(query, [
+        courseId,
+        userId,
+      ]);
+
+      return {
+        success: true,
+        result: result.affectedRows === 1,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        result: false,
+      };
+    }
   }
 }

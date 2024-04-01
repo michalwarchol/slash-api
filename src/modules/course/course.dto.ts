@@ -41,4 +41,14 @@ export type FullCourseResponse = {
   type: CourseSubType;
   courseMaterials: CourseMaterials[];
   courseVideos: CourseVideo[];
+  likesCount: number;
 };
+
+export type CourseUserStatistics = {
+  isLiked: boolean;
+};
+
+export type LikeCourseInput = {
+  id: string;
+  isLike: boolean;
+}
