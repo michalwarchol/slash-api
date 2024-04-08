@@ -21,6 +21,7 @@ import {
   CourseTypesResponse,
   CourseUserStatistics,
   LikeCourseInput,
+  UserCourseWithStats,
 } from './course.dto';
 import { CoursesService } from './course.service';
 import { Roles } from 'src/guards/roles.decorator';
@@ -50,6 +51,23 @@ export class CourseController {
       req.headers.lang || 'en',
       parseInt(page),
       parseInt(perPage),
+    );
+  }
+
+  @Get('creator_list')
+  creatorList(
+    @Query('id') id: string,
+    @Query('orderBy') orderBy: string,
+    @Query('order') order: 'ASC' | 'DESC',
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+  ): Promise<PaginatedQueryResult<UserCourseWithStats>> {
+    return this.coursesService.getUserCourses(
+      id,
+      parseInt(page),
+      parseInt(perPage),
+      orderBy,
+      order,
     );
   }
 
@@ -106,6 +124,10 @@ export class CourseController {
     @Request() req,
     @Body() body: LikeCourseInput,
   ): Promise<TMutationResult<boolean>> {
-    return this.coursesService.likeOrDislikeCourse(body.id, req.user.id, body.isLike);
+    return this.coursesService.likeOrDislikeCourse(
+      body.id,
+      req.user.id,
+      body.isLike,
+    );
   }
 }

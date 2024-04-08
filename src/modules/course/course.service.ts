@@ -19,6 +19,7 @@ import {
   UpdateCourseInput,
   CourseTypesResponse,
   CourseUserStatistics,
+  UserCourseWithStats,
 } from './course.dto';
 import { Course, CourseSubType, CourseType } from './course.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
@@ -194,6 +195,86 @@ export class CoursesService {
 
     return {
       data: courses,
+      paginatorInfo: {
+        count: courses.length,
+        page: realPage,
+        perPage: realPerPage,
+        total,
+      },
+    };
+  }
+
+  async getUserCourses(
+    id: string,
+    page: number = 1,
+    perPage: number,
+    orderBy?: string,
+    order?: 'ASC' | 'DESC',
+  ): Promise<PaginatedQueryResult<UserCourseWithStats>> {
+    const realPage = page || 1;
+    const realPerPage = perPage || 10;
+
+    const query = `
+      SELECT 
+        subType.id as subType_id,
+        subType.name as subType_name,
+        subType.valuePl as subType_valuePl,
+        subType.valueEn as subType_valueEn,
+        type.id as type_id,
+        type.name as name,
+        type.valuePl as type_valuePl,
+        type.valueEn as type_valueEn,
+        course.id as id,
+        course.name as name,
+        COUNT(courseVideo.id) as numberOfVideos,
+        COUNT(courseStudentsUser.userId) as numberOfLikes
+      FROM course
+      LEFT JOIN course_sub_type subType ON typeId = subType.id
+      LEFT JOIN course_type type ON subType.mainTypeId = type.id
+      LEFT JOIN course_video courseVideo ON course.id = courseVideo.courseId
+      LEFT JOIN course_students_user courseStudentsUser ON course.id = courseStudentsUser.courseId
+      WHERE course.creatorId = '${id}'
+      GROUP BY 
+        subType.id,
+        subType.name,
+        subType.valuePl,
+        subType.valueEn,
+        type.id,
+        type.name,
+        type.valuePl,
+        type.valueEn,
+        course.id,
+        course.name
+      ORDER BY ${orderBy} ${order} LIMIT ${realPerPage} OFFSET ${(realPage - 1) * realPerPage};
+    `;
+
+    const courses = await this.courseRepository.query(query);
+    const couresParsed = courses.map((course) => ({
+      id: course.id,
+      name: course.name,
+      type: {
+        id: course.subType_id,
+        name: course.subType_name,
+        valuePl: course.subType_valuePl,
+        valueEn: course.subType_valueEn,
+        mainType: {
+          id: course.type_id,
+          name: course.type_name,
+          valuePl: course.type_valuePl,
+          valueEn: course.type_valueEn,
+        },
+      },
+      numberOfVideos: course.numberOfVideos,
+      numberOfLikes: course.numberOfLikes,
+    }));
+
+    const total = await this.courseRepository
+      .createQueryBuilder('course')
+      .where('course.creatorId = :id', { id })
+      .getCount();
+
+    return {
+      data: couresParsed,
       paginatorInfo: {
         count: courses.length,
         page: realPage,
