@@ -52,3 +52,12 @@ export type LikeCourseInput = {
   id: string;
   isLike: boolean;
 }
+
+export type UserCourseWithStats = {
+  id: string;
+  name: string;
+  description: string;
+  type: CourseSubType;
+  numberOfVideos: number;
+  numberOfLikes: number;
+}

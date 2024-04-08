@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Request,
   UseGuards,
@@ -39,5 +40,10 @@ export class UserController {
   @Get('roles')
   roles(@Request() req) {
     return this.usersService.userRoles(req.headers.lang || 'en');
+  }
+
+  @Get('user/:id')
+  user(@Param('id') id: string) {
+    return this.usersService.getUserData(id);
   }
 }
