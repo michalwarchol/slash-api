@@ -61,3 +61,11 @@ export type UserCourseWithStats = {
   numberOfVideos: number;
   numberOfLikes: number;
 }
+
+export type CourseMaterial = {
+  id: string;
+  name: string;
+  link: string;
+  type: string;
+  size: number;
+}

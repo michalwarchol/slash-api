@@ -9,7 +9,12 @@ import {
   Query,
   Request,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
+  Res,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 
@@ -22,6 +27,7 @@ import {
   CourseUserStatistics,
   LikeCourseInput,
   UserCourseWithStats,
+  CourseMaterial,
 } from './course.dto';
 import { CoursesService } from './course.service';
 import { Roles } from 'src/guards/roles.decorator';
@@ -129,5 +135,37 @@ export class CourseController {
       req.user.id,
       body.isLike,
     );
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  @Post('materials/:id')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadMaterial(
+    @Request() req,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<TMutationResult<CourseMaterial>> {
+    if (!file) {
+      return Promise.resolve({ success: false, result: null });
+    }
+
+    return this.coursesService.uploadCourseMaterial(req.user.id, id, file);
+  }
+
+  @Get('materials/file/:key')
+  async getMaterialFile(@Param('key') key: string, @Res() res: Response) {
+    const fileStream = await this.coursesService.getMaterialFile(key);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    fileStream.pipe(res);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  @Delete('materials/file/:id')
+  deleteMaterialFile(@Request() req, @Param('id') id: string): Promise<TMutationResult<boolean>> {
+    return this.coursesService.deleteMaterialFile(req.user.id, id);
   }
 }
