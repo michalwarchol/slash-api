@@ -114,12 +114,14 @@ export class CourseMaterials {
   @Column('varchar')
   link: string;
 
-  @Column('varchar', { length: 10 })
+  @Column('varchar', { length: 50 })
   type: string;
 
   @Column('int')
   size: number;
 
-  @ManyToOne(() => Course, (course) => course.courseMaterials)
+  @ManyToOne(() => Course, (course) => course.courseMaterials, {
+    onDelete: 'CASCADE',
+  })
   course: Course;
 }

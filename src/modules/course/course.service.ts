@@ -1,16 +1,23 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import { Repository } from 'typeorm';
+import { S3 } from 'aws-sdk';
+import { v4 as uuid } from 'uuid';
+import { Readable } from 'stream';
 
 import { TValidationOptions } from 'src/types/validators';
 import RequiredValidator from 'src/validators/RequiredValidator';
 import { validate } from 'src/validators';
 import isEmpty from 'src/utils/isEmpty';
 import { User } from 'src/modules/user/user.entity';
+import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
+import withPercentage from 'src/utils/withPercentage';
 
 import {
   CourseResponse,
@@ -20,20 +27,35 @@ import {
   CourseTypesResponse,
   CourseUserStatistics,
   UserCourseWithStats,
+  CourseMaterial,
 } from './course.dto';
-import { Course, CourseSubType, CourseType } from './course.entity';
-import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
-import withPercentage from 'src/utils/withPercentage';
+import {
+  Course,
+  CourseMaterials,
+  CourseSubType,
+  CourseType,
+} from './course.entity';
 
 @Injectable()
 export class CoursesService {
+  private readonly s3Client = new S3();
+
   constructor(
     @InjectRepository(Course)
     private courseRepository: Repository<Course>,
 
     @InjectRepository(CourseType)
     private courseTypeRepository: Repository<CourseType>,
-  ) {}
+
+    @InjectRepository(CourseMaterials)
+    private courseMaterialsRepository: Repository<CourseMaterials>,
+
+    private readonly configService: ConfigService,
+  ) {
+    this.s3Client.config.update({
+      region: this.configService.get('aws.region'),
+    });
+  }
 
   async getCourseTypes(lang: string): Promise<CourseTypesResponse> {
     const langMap = {
@@ -292,6 +314,7 @@ export class CoursesService {
       where: { id },
       relations: {
         creator: true,
+        courseMaterials: true,
       },
       select: { creator: { id: true } },
     });
@@ -306,6 +329,18 @@ export class CoursesService {
     if (course.creator.id !== userId) {
       throw new ForbiddenException();
     }
+
+    await Promise.all(
+      course.courseMaterials.map((material) =>
+        this.s3Client
+          .deleteObject({
+            Bucket: this.configService.get('aws.utilityBucketName'),
+            Key: material.link,
+          })
+          .promise(),
+      ),
+    );
+
     const result = await this.courseRepository.delete({ id });
 
     return {
@@ -356,5 +391,118 @@ export class CoursesService {
         result: false,
       };
     }
+  }
+
+  async uploadCourseMaterial(
+    userId: string,
+    courseId: string,
+    file: Express.Multer.File,
+  ): Promise<TMutationResult<CourseMaterial>> {
+    const courseData = await this.courseRepository.query(
+      'SELECT creatorId FROM course WHERE id = ? LIMIT 1',
+      [courseId],
+    );
+
+    if (courseData.length === 0 || userId !== courseData[0].creatorId) {
+      throw new ForbiddenException();
+    }
+
+    const fileKey = uuid();
+
+    const courseMaterial = this.courseMaterialsRepository.create({
+      name: file.originalname,
+      size: file.size,
+      type: file.mimetype,
+      link: fileKey,
+      course: { id: courseId },
+    });
+
+    await this.courseMaterialsRepository.save(courseMaterial);
+
+    await this.s3Client
+      .upload({
+        Key: fileKey,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+        Body: file.buffer,
+      })
+      .promise();
+
+    return {
+      success: true,
+      result: courseMaterial,
+    };
+  }
+
+  async getMaterialFile(key: string): Promise<Readable> {
+    try {
+      await this.s3Client
+        .headObject({
+          Bucket: this.configService.get('aws.utilityBucketName'),
+          Key: key,
+        })
+        .promise();
+    } catch (error) {
+      if (error.name === 'NotFound') {
+        throw new NotFoundException();
+      }
+      throw new BadRequestException();
+    }
+
+    return this.s3Client
+      .getObject(
+        {
+          Bucket: this.configService.get('aws.utilityBucketName'),
+          Key: key,
+        },
+      )
+      .createReadStream();
+  }
+
+  async deleteMaterialFile(
+    userId: string,
+    id: string,
+  ): Promise<TMutationResult<boolean>> {
+    const materialData = await this.courseMaterialsRepository.query(
+      'SELECT link, courseId FROM course_materials WHERE id = ? LIMIT 1',
+      [id],
+    );
+    if (materialData.length === 0) {
+      throw new NotFoundException();
+    }
+    const courseId = materialData[0].courseId;
+    const courseData = await this.courseRepository.query(
+      'SELECT creatorId from course WHERE id = ? LIMIT 1',
+      [courseId],
+    );
+
+    if (courseData.length === 0) {
+      throw new NotFoundException();
+    }
+
+    if (courseData[0].creatorId !== userId) {
+      throw new ForbiddenException();
+    }
+
+    const key = materialData[0].link;
+    try {
+      await this.s3Client
+        .deleteObject({
+          Bucket: this.configService.get('aws.utilityBucketName'),
+          Key: key,
+        })
+        .promise();
+    } catch (error) {
+      if (error.name === 'NotFound') {
+        throw new NotFoundException();
+      }
+      throw new BadRequestException();
+    }
+
+    const result = await this.courseMaterialsRepository.delete({ id });
+
+    return {
+      success: true,
+      result: result.affected > 0,
+    };
   }
 }

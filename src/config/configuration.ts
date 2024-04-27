@@ -11,4 +11,9 @@ export default () => ({
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRE,
   },
+  aws: {
+    region: process.env.AWS_REGION,
+    videoBucketName: process.env.AWS_VIDEO_BUCKET_NAME,
+    utilityBucketName: process.env.AWS_UTILITY_BUCKET_NAME,
+  },
 });
