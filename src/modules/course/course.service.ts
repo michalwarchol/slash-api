@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { S3 } from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
 import { Readable } from 'stream';
+import { getVideoDurationInSeconds } from 'get-video-duration';
 
 import { TValidationOptions } from 'src/types/validators';
 import RequiredValidator from 'src/validators/RequiredValidator';
@@ -18,6 +19,7 @@ import isEmpty from 'src/utils/isEmpty';
 import { User } from 'src/modules/user/user.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import withPercentage from 'src/utils/withPercentage';
+import bufferToReadable from 'src/utils/bufferToReadable';
 
 import {
   CourseResponse,
@@ -28,12 +30,15 @@ import {
   CourseUserStatistics,
   UserCourseWithStats,
   CourseMaterial,
+  CourseVideoResponse,
+  CourseVideoInput,
 } from './course.dto';
 import {
   Course,
   CourseMaterials,
   CourseSubType,
   CourseType,
+  CourseVideo,
 } from './course.entity';
 
 @Injectable()
@@ -49,6 +54,9 @@ export class CoursesService {
 
     @InjectRepository(CourseMaterials)
     private courseMaterialsRepository: Repository<CourseMaterials>,
+
+    @InjectRepository(CourseVideo)
+    private courseVideoRepository: Repository<CourseVideo>,
 
     private readonly configService: ConfigService,
   ) {
@@ -181,6 +189,20 @@ export class CoursesService {
     const likesCountQuery =
       'SELECT count(*) AS count FROM course_students_user WHERE courseId = ?';
     const likesCount = await this.courseRepository.query(likesCountQuery, [id]);
+
+    course.courseVideos = course.courseVideos.map((video) => ({
+      ...video,
+      link: this.s3Client.getSignedUrl('getObject', {
+        Key: video.link,
+        Bucket: this.configService.get('aws.videoBucketName'),
+        Expires: 6000,
+      }),
+      thumbnailLink: this.s3Client.getSignedUrl('getObject', {
+        Key: video.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+        Expires: 6000,
+      }),
+    }));
 
     return {
       ...course,
@@ -449,12 +471,10 @@ export class CoursesService {
     }
 
     return this.s3Client
-      .getObject(
-        {
-          Bucket: this.configService.get('aws.utilityBucketName'),
-          Key: key,
-        },
-      )
+      .getObject({
+        Bucket: this.configService.get('aws.utilityBucketName'),
+        Key: key,
+      })
       .createReadStream();
   }
 
@@ -503,6 +523,64 @@ export class CoursesService {
     return {
       success: true,
       result: result.affected > 0,
+    };
+  }
+
+  async uploadCourseVideo(
+    userId: string,
+    courseId: string,
+    files: Array<Express.Multer.File>,
+    body: CourseVideoInput,
+  ): Promise<TMutationResult<CourseVideoResponse>> {
+    const courseData = await this.courseRepository.query(
+      'SELECT id, creatorId FROM course WHERE id = ? LIMIT 1',
+      [courseId],
+    );
+
+    if (courseData.length === 0 || userId !== courseData[0].creatorId) {
+      throw new ForbiddenException();
+    }
+
+    const thumbnailKey = uuid();
+    const thumbnail = files[0];
+
+    await this.s3Client
+      .upload({
+        Key: thumbnailKey,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+        Body: thumbnail.buffer,
+      })
+      .promise();
+
+    const videoKey = uuid();
+    const video = files[1];
+
+    await this.s3Client
+      .upload({
+        Key: videoKey,
+        Bucket: this.configService.get('aws.videoBucketName'),
+        Body: video.buffer,
+      })
+      .promise();
+
+    const videoDuration = await getVideoDurationInSeconds(
+      bufferToReadable(video.buffer),
+    );
+
+    const newVideo = this.courseVideoRepository.create({
+      ...body,
+      course: { id: courseData[0].id } as Course,
+      duration: videoDuration,
+      link: videoKey,
+      thumbnailLink: thumbnailKey,
+      views: 0,
+    });
+
+    await this.courseVideoRepository.save(newVideo);
+
+    return {
+      success: true,
+      result: newVideo,
     };
   }
 }

@@ -12,8 +12,12 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
+  UploadedFiles,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 import { Response } from 'express';
 
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
@@ -28,6 +32,8 @@ import {
   LikeCourseInput,
   UserCourseWithStats,
   CourseMaterial,
+  CourseVideoResponse,
+  CourseVideoInput,
 } from './course.dto';
 import { CoursesService } from './course.service';
 import { Roles } from 'src/guards/roles.decorator';
@@ -165,7 +171,72 @@ export class CourseController {
   @UseGuards(RolesGuard)
   @Roles(UserType.EDUCATOR)
   @Delete('materials/file/:id')
-  deleteMaterialFile(@Request() req, @Param('id') id: string): Promise<TMutationResult<boolean>> {
+  deleteMaterialFile(
+    @Request() req,
+    @Param('id') id: string,
+  ): Promise<TMutationResult<boolean>> {
     return this.coursesService.deleteMaterialFile(req.user.id, id);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  @Post('video/:id')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      {
+        name: 'thumbnail',
+        maxCount: 1,
+      },
+      {
+        name: 'video',
+        maxCount: 1,
+      },
+    ]),
+  )
+  uploadVideo(
+    @Request() req,
+    @Param('id') id: string,
+    @UploadedFiles()
+    files: { thumbnail: Express.Multer.File[]; video: Express.Multer.File[] },
+    @Body() body: CourseVideoInput,
+  ): Promise<TMutationResult<CourseVideoResponse>> {
+    if (!files) {
+      return Promise.resolve({
+        success: false,
+        result: null,
+        errors: {
+          thumbnail: 'required',
+          video: 'required',
+        },
+      });
+    }
+
+    if (!files.thumbnail[0].mimetype.startsWith('image/')) {
+      return Promise.resolve({
+        success: false,
+        result: null,
+        errors: {
+          thumbnail: 'required',
+        },
+      });
+    }
+
+    if (!files.video[0].mimetype.startsWith('video/')) {
+      return Promise.resolve({
+        success: false,
+        result: null,
+        errors: {
+          video: 'required',
+        },
+      });
+    }
+
+    return this.coursesService.uploadCourseVideo(
+      req.user.id,
+      id,
+      [files.thumbnail[0], files.video[0]],
+      body,
+    );
   }
 }
