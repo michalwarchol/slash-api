@@ -69,3 +69,18 @@ export type CourseMaterial = {
   type: string;
   size: number;
 }
+
+export type CourseVideoResponse = {
+  id: string;
+  name: string;
+  description: string;
+  link: string;
+  thumbnailLink: string;
+  duration: number;
+  views: number;
+};
+
+export type CourseVideoInput = {
+  name: string;
+  description: string;
+};
