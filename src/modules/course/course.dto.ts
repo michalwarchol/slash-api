@@ -1,5 +1,6 @@
 import { User } from '../user/user.entity';
-import { CourseMaterials, CourseSubType, CourseVideo } from './course.entity';
+import { CourseVideo } from '../video/video.entity';
+import { CourseMaterials, CourseSubType } from './course.entity';
 
 export type CourseTypesResponse = {
   id: string;
@@ -51,7 +52,7 @@ export type CourseUserStatistics = {
 export type LikeCourseInput = {
   id: string;
   isLike: boolean;
-}
+};
 
 export type UserCourseWithStats = {
   id: string;
@@ -60,7 +61,7 @@ export type UserCourseWithStats = {
   type: CourseSubType;
   numberOfVideos: number;
   numberOfLikes: number;
-}
+};
 
 export type CourseMaterial = {
   id: string;
@@ -68,19 +69,4 @@ export type CourseMaterial = {
   link: string;
   type: string;
   size: number;
-}
-
-export type CourseVideoResponse = {
-  id: string;
-  name: string;
-  description: string;
-  link: string;
-  thumbnailLink: string;
-  duration: number;
-  views: number;
-};
-
-export type CourseVideoInput = {
-  name: string;
-  description: string;
 };
