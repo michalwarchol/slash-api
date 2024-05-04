@@ -10,8 +10,7 @@ import configuration from './config/configuration';
 
 import { UsersModule } from 'src/modules/user/user.module';
 import { CoursesModule } from 'src/modules/course/course.module';
-import { RolesGuard } from './guards/rolesGuard';
-import { APP_GUARD } from '@nestjs/core';
+import { VideoModule } from 'src/modules/video/video.module';
 
 @Module({
   imports: [
@@ -36,6 +35,7 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     UsersModule,
     CoursesModule,
+    VideoModule,
     PassportModule,
     JwtModule.register({
       secret: configuration().jwt.secret,
