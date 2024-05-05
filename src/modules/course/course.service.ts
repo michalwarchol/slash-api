@@ -30,15 +30,12 @@ import {
   CourseUserStatistics,
   UserCourseWithStats,
   CourseMaterial,
-  CourseVideoResponse,
-  CourseVideoInput,
 } from './course.dto';
 import {
   Course,
   CourseMaterials,
   CourseSubType,
   CourseType,
-  CourseVideo,
 } from './course.entity';
 
 @Injectable()
@@ -54,9 +51,6 @@ export class CoursesService {
 
     @InjectRepository(CourseMaterials)
     private courseMaterialsRepository: Repository<CourseMaterials>,
-
-    @InjectRepository(CourseVideo)
-    private courseVideoRepository: Repository<CourseVideo>,
 
     private readonly configService: ConfigService,
   ) {
@@ -523,64 +517,6 @@ export class CoursesService {
     return {
       success: true,
       result: result.affected > 0,
-    };
-  }
-
-  async uploadCourseVideo(
-    userId: string,
-    courseId: string,
-    files: Array<Express.Multer.File>,
-    body: CourseVideoInput,
-  ): Promise<TMutationResult<CourseVideoResponse>> {
-    const courseData = await this.courseRepository.query(
-      'SELECT id, creatorId FROM course WHERE id = ? LIMIT 1',
-      [courseId],
-    );
-
-    if (courseData.length === 0 || userId !== courseData[0].creatorId) {
-      throw new ForbiddenException();
-    }
-
-    const thumbnailKey = uuid();
-    const thumbnail = files[0];
-
-    await this.s3Client
-      .upload({
-        Key: thumbnailKey,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-        Body: thumbnail.buffer,
-      })
-      .promise();
-
-    const videoKey = uuid();
-    const video = files[1];
-
-    await this.s3Client
-      .upload({
-        Key: videoKey,
-        Bucket: this.configService.get('aws.videoBucketName'),
-        Body: video.buffer,
-      })
-      .promise();
-
-    const videoDuration = await getVideoDurationInSeconds(
-      bufferToReadable(video.buffer),
-    );
-
-    const newVideo = this.courseVideoRepository.create({
-      ...body,
-      course: { id: courseData[0].id } as Course,
-      duration: videoDuration,
-      link: videoKey,
-      thumbnailLink: thumbnailKey,
-      views: 0,
-    });
-
-    await this.courseVideoRepository.save(newVideo);
-
-    return {
-      success: true,
-      result: newVideo,
     };
   }
 }

@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { User } from '../user/user.entity';
+import { CourseVideo } from '../video/video.entity';
 
 @Entity()
 export class CourseType {
@@ -74,33 +75,6 @@ export class Course {
   @ManyToMany(() => User, (user) => user.likedCourses)
   @JoinTable()
   students: User[];
-}
-
-@Entity()
-export class CourseVideo {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column('varchar', { length: 250 })
-  name: string;
-
-  @Column('mediumtext')
-  description: string;
-
-  @Column('varchar')
-  link: string;
-
-  @Column('varchar')
-  thumbnailLink: string;
-
-  @Column('int')
-  duration: number;
-
-  @Column('int')
-  views: number;
-
-  @ManyToOne(() => Course, (course) => course.courseVideos)
-  course: Course;
 }
 
 @Entity()
