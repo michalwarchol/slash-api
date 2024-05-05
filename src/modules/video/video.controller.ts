@@ -4,6 +4,8 @@ import {
   Get,
   Param,
   Post,
+  Put,
+  Query,
   Request,
   UploadedFiles,
   UseGuards,
@@ -16,8 +18,10 @@ import { RolesGuard } from 'src/guards/rolesGuard';
 import { UserType } from 'src/types/users';
 import { Roles } from 'src/guards/roles.decorator';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { TMutationResult } from 'src/types/responses';
+import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import {
+  CourseVideoCommentInput,
+  CourseVideoCommentResponse,
   CourseVideoFullResponse,
   CourseVideoInput,
   CourseVideoResponse,
@@ -92,5 +96,51 @@ export class VideoController {
   @Get(':id')
   getVideo(@Param('id') id: string): Promise<CourseVideoFullResponse> {
     return this.videoService.getFullVideo(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  @Post(':id/comments')
+  addComment(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: CourseVideoCommentInput,
+  ): Promise<CourseVideoCommentResponse> {
+    return this.videoService.addEditComment(id, req.user.id, body.text);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  @Put(':id/comments')
+  editComment(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: CourseVideoCommentInput,
+  ): Promise<CourseVideoCommentResponse> {
+    return this.videoService.addEditComment(
+      id,
+      req.user.id,
+      body.text,
+      body.id,
+    );
+  }
+
+  @Get(':id/comments')
+  getComments(
+    @Param('id') id: string,
+    @Query('orderBy') orderBy: string,
+    @Query('order') order: 'ASC' | 'DESC',
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+  ): Promise<PaginatedQueryResult<CourseVideoCommentResponse>> {
+    return this.videoService.getVideoComments(
+      id,
+      parseInt(page),
+      parseInt(perPage),
+      orderBy,
+      order,
+    );
   }
 }

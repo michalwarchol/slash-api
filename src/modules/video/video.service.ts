@@ -5,9 +5,10 @@ import { Repository } from 'typeorm';
 import { S3 } from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
 
-import { CourseVideo, VideoRatings } from './video.entity';
-import { TMutationResult } from 'src/types/responses';
+import { CourseVideo, VideoComments, VideoRatings } from './video.entity';
+import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import {
+  CourseVideoCommentResponse,
   CourseVideoFullResponse,
   CourseVideoInput,
   CourseVideoResponse,
@@ -15,6 +16,7 @@ import {
 import bufferToReadable from 'src/utils/bufferToReadable';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Course } from '../course/course.entity';
+import { User } from '../user/user.entity';
 
 @Injectable()
 export class VideoService {
@@ -29,6 +31,9 @@ export class VideoService {
 
     @InjectRepository(VideoRatings)
     private videoRatingsRepository: Repository<VideoRatings>,
+
+    @InjectRepository(VideoComments)
+    private videoCommentsRepository: Repository<VideoComments>,
 
     private readonly configService: ConfigService,
   ) {
@@ -144,6 +149,83 @@ export class VideoService {
       previousVideoId: previousVideo[0] ? previousVideo[0].id : null,
       nextVideoId: nextVideo[0] ? nextVideo[0].id : null,
       rating: rating[0].rating || 1,
+    };
+  }
+
+  async addEditComment(
+    videoId: string,
+    userId: string,
+    text: string,
+    commentId?: string,
+  ): Promise<CourseVideoCommentResponse> {
+    const comment = this.videoCommentsRepository.create({
+      id: commentId,
+      text,
+      author: { id: userId },
+      video: { id: videoId },
+    });
+    const { id } = await this.videoCommentsRepository.save(comment);
+
+    return this.videoCommentsRepository.findOne({
+      where: { id },
+      relations: { author: true },
+    });
+  }
+
+  async getVideoComments(
+    id: string,
+    page: number = 1,
+    perPage: number,
+    orderBy?: string,
+    order?: 'ASC' | 'DESC',
+  ): Promise<PaginatedQueryResult<CourseVideoCommentResponse>> {
+    const realPage = page || 1;
+    const realPerPage = perPage || 10;
+
+    let comments = await this.videoCommentsRepository.find({
+      where: {
+        video: { id },
+      },
+      relations: {
+        author: true,
+      },
+      order: {
+        [orderBy]: order,
+      },
+      take: realPerPage,
+      skip: (realPage - 1) * realPerPage,
+    });
+
+    const total = await this.videoCommentsRepository
+      .createQueryBuilder('comments')
+      .where('comments.videoId = :id', { id })
+      .getCount();
+
+    comments = comments.map((comment) => {
+      const avatarLink =
+        comment.author.avatar &&
+        this.s3Client.getSignedUrl('getObject', {
+          Key: comment.author.avatar,
+          Bucket: this.configService.get('aws.utilityBucketName'),
+        });
+
+      return {
+        ...comment,
+        author: {
+          ...comment.author,
+          avatar: avatarLink,
+        },
+      };
+    });
+
+    return {
+      data: comments,
+      paginatorInfo: {
+        count: comments.length,
+        page: realPage,
+        perPage: realPerPage,
+        total,
+      },
     };
   }
 }
