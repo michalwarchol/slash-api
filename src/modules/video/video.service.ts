@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
@@ -17,6 +21,7 @@ import bufferToReadable from 'src/utils/bufferToReadable';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Course } from '../course/course.entity';
 import { User } from '../user/user.entity';
+import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class VideoService {
@@ -226,6 +231,25 @@ export class VideoService {
         perPage: realPerPage,
         total,
       },
+    };
+  }
+
+  async increaseViews(id: string): Promise<TMutationResult<boolean>> {
+    await this.courseVideoRepository.manager.transaction(async () => {
+      try {
+        const { views } = await this.courseVideoRepository
+          .createQueryBuilder('videos')
+          .where('videos.id = :id', { id })
+          .getOneOrFail();
+        await this.courseVideoRepository.save({ id, views: views + 1 });
+      } catch (e) {
+        throw new NotFoundException(e);
+      }
+    });
+
+    return {
+      success: true,
+      result: true,
     };
   }
 }
