@@ -143,4 +143,11 @@ export class VideoController {
       order,
     );
   }
+
+  @Put(':id/views')
+  incrementViews(
+    @Param('id') id: string,
+  ): Promise<TMutationResult<boolean>> {
+    return this.videoService.increaseViews(id);
+  }
 }
