@@ -1,5 +1,5 @@
-import { CourseResponse } from "../course/course.dto";
-import { User } from "../user/user.entity";
+import { CourseResponse } from '../course/course.dto';
+import { User } from '../user/user.entity';
 
 export type CourseVideoResponse = {
   id: string;
@@ -33,7 +33,7 @@ export type CourseVideoFullResponse = {
 export type CourseVideoCommentInput = {
   id?: string;
   text: string;
-}
+};
 
 export type CourseVideoCommentResponse = {
   id: string;
@@ -41,4 +41,14 @@ export type CourseVideoCommentResponse = {
   author: User;
   createdAt: Date;
   updatedAt: Date;
-}
+};
+
+export type CourseVideoRateInput = {
+  id?: string;
+  rating: number;
+};
+
+export type CourseVideoRateResponse = {
+  id: string;
+  rating: number;
+};
