@@ -15,6 +15,8 @@ import {
   CourseVideoCommentResponse,
   CourseVideoFullResponse,
   CourseVideoInput,
+  CourseVideoRateInput,
+  CourseVideoRateResponse,
   CourseVideoResponse,
 } from './video.dto';
 import bufferToReadable from 'src/utils/bufferToReadable';
@@ -146,15 +148,31 @@ export class VideoService {
 
     const rating = await this.videoRatingsRepository.query(
       'SELECT AVG(rating) as rating FROM video_ratings WHERE videoId = ?;',
-      [video.course.id],
+      [video.id],
     );
 
     return {
       ...video,
       previousVideoId: previousVideo[0] ? previousVideo[0].id : null,
       nextVideoId: nextVideo[0] ? nextVideo[0].id : null,
-      rating: rating[0].rating || 1,
+      rating: parseFloat(rating[0].rating) || 1,
     };
+  }
+
+  async getVideoRating(
+    id: string,
+    authorId: string,
+  ): Promise<CourseVideoRateResponse> {
+    return this.videoRatingsRepository.findOne({
+      where: {
+        video: {
+          id,
+        },
+        author: {
+          id: authorId,
+        },
+      },
+    });
   }
 
   async addEditComment(
@@ -250,6 +268,29 @@ export class VideoService {
     return {
       success: true,
       result: true,
+    };
+  }
+
+  async addEditRate(
+    authorId: string,
+    videoId: string,
+    input: CourseVideoRateInput,
+  ): Promise<TMutationResult<CourseVideoRateResponse>> {
+    const rate = this.videoRatingsRepository.create({
+      ...input,
+      video: {
+        id: videoId,
+      },
+      author: {
+        id: authorId,
+      },
+    });
+
+    await this.videoRatingsRepository.save(rate);
+
+    return {
+      success: true,
+      result: rate,
     };
   }
 }

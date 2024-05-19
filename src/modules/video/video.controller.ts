@@ -24,6 +24,8 @@ import {
   CourseVideoCommentResponse,
   CourseVideoFullResponse,
   CourseVideoInput,
+  CourseVideoRateInput,
+  CourseVideoRateResponse,
   CourseVideoResponse,
 } from './video.dto';
 
@@ -101,6 +103,17 @@ export class VideoController {
   @UseGuards(AuthGuard)
   @UseGuards(RolesGuard)
   @Roles(UserType.STUDENT)
+  @Get(':id/rating')
+  getMyVideoRating(
+    @Request() req,
+    @Param('id') id: string,
+  ): Promise<CourseVideoRateResponse> {
+    return this.videoService.getVideoRating(id, req.user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
   @Post(':id/comments')
   addComment(
     @Request() req,
@@ -145,9 +158,19 @@ export class VideoController {
   }
 
   @Put(':id/views')
-  incrementViews(
-    @Param('id') id: string,
-  ): Promise<TMutationResult<boolean>> {
+  incrementViews(@Param('id') id: string): Promise<TMutationResult<boolean>> {
     return this.videoService.increaseViews(id);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  @Post(':id/rate')
+  addRate(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: CourseVideoRateInput,
+  ): Promise<TMutationResult<CourseVideoRateResponse>> {
+    return this.videoService.addEditRate(req.user.id, id, body);
   }
 }
