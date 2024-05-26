@@ -95,6 +95,18 @@ export class VideoController {
     );
   }
 
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  @Put(':id')
+  editVideo(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() body: CourseVideoInput,
+  ): Promise<TMutationResult<CourseVideoResponse>> {
+    return this.videoService.editCourseVideo(req.user.id, id, body);
+  }
+
   @Get(':id')
   getVideo(@Param('id') id: string): Promise<CourseVideoFullResponse> {
     return this.videoService.getFullVideo(id);

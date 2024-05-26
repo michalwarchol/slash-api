@@ -22,8 +22,6 @@ import {
 import bufferToReadable from 'src/utils/bufferToReadable';
 import getVideoDurationInSeconds from 'get-video-duration';
 import { Course } from '../course/course.entity';
-import { User } from '../user/user.entity';
-import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class VideoService {
@@ -105,6 +103,35 @@ export class VideoService {
       success: true,
       result: newVideo,
     };
+  }
+
+  async editCourseVideo(
+    userId: string,
+    videoId: string,
+    body: CourseVideoInput,
+  ): Promise<TMutationResult<CourseVideoResponse>> {
+    const video = await this.courseVideoRepository.findOne({ where: {id: videoId}, relations: { course: {
+      creator: true,
+    }}});
+
+    if (!video) {
+      throw new NotFoundException();
+    }
+
+    if (video.course.creator.id !== userId) {
+      throw new ForbiddenException();
+    }
+    
+    const result = await this.courseVideoRepository.update({ id: videoId}, body);
+    if (result.affected === 1) { 
+      video.name = body.name;
+      video.description = body.description;
+    }
+    
+    return {
+      success: result.affected === 1,
+      result: video,
+    }
   }
 
   async getFullVideo(id: string): Promise<CourseVideoFullResponse> {
