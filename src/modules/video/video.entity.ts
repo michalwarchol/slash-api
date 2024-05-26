@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 import { Course } from 'src/modules/course/course.entity';
 import { User } from 'src/modules/user/user.entity';
@@ -26,10 +34,14 @@ export class CourseVideo {
   @Column('int')
   views: number;
 
-  @OneToMany(() => VideoComments, (videoComments) => videoComments.video)
+  @OneToMany(() => VideoComments, (videoComments) => videoComments.video, {
+    cascade: true,
+  })
   videoComments: VideoComments[];
 
-  @OneToMany(() => VideoRatings, (videoRatings) => videoRatings.video)
+  @OneToMany(() => VideoRatings, (videoRatings) => videoRatings.video, {
+    cascade: true,
+  })
   ratings: VideoRatings[];
 
   @ManyToOne(() => Course, (course) => course.courseVideos)

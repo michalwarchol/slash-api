@@ -110,9 +110,14 @@ export class VideoService {
     videoId: string,
     body: CourseVideoInput,
   ): Promise<TMutationResult<CourseVideoResponse>> {
-    const video = await this.courseVideoRepository.findOne({ where: {id: videoId}, relations: { course: {
-      creator: true,
-    }}});
+    const video = await this.courseVideoRepository.findOne({
+      where: { id: videoId },
+      relations: {
+        course: {
+          creator: true,
+        },
+      },
+    });
 
     if (!video) {
       throw new NotFoundException();
@@ -121,17 +126,63 @@ export class VideoService {
     if (video.course.creator.id !== userId) {
       throw new ForbiddenException();
     }
-    
-    const result = await this.courseVideoRepository.update({ id: videoId}, body);
-    if (result.affected === 1) { 
+
+    const result = await this.courseVideoRepository.update(
+      { id: videoId },
+      body,
+    );
+    if (result.affected === 1) {
       video.name = body.name;
       video.description = body.description;
     }
-    
+
     return {
       success: result.affected === 1,
       result: video,
+    };
+  }
+
+  async deleteVideo(
+    userId: string,
+    videoId: string,
+  ): Promise<TMutationResult<boolean>> {
+    const video = await this.courseVideoRepository.findOne({
+      where: { id: videoId },
+      relations: {
+        course: {
+          creator: true,
+        },
+      },
+    });
+
+    if (!video) {
+      throw new NotFoundException();
     }
+
+    if (video.course.creator.id !== userId) {
+      throw new ForbiddenException();
+    }
+
+    await this.s3Client
+      .deleteObject({
+        Key: video.link,
+        Bucket: this.configService.get('aws.videoBucketName'),
+      })
+      .promise();
+
+    await this.s3Client
+      .deleteObject({
+        Key: video.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      })
+      .promise();
+
+    const result = await this.courseVideoRepository.delete({ id: videoId });
+
+    return {
+      success: true,
+      result: result.affected === 1,
+    };
   }
 
   async getFullVideo(id: string): Promise<CourseVideoFullResponse> {
