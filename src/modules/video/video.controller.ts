@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -105,6 +106,17 @@ export class VideoController {
     @Body() body: CourseVideoInput,
   ): Promise<TMutationResult<CourseVideoResponse>> {
     return this.videoService.editCourseVideo(req.user.id, id, body);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.EDUCATOR)
+  @Delete(':id')
+  deleteVideo(
+    @Request() req,
+    @Param('id') id: string,
+  ): Promise<TMutationResult<boolean>> {
+    return this.videoService.deleteVideo(req.user.id, id);
   }
 
   @Get(':id')
