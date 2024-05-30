@@ -51,3 +51,8 @@ export class UserResponse {
   coursesInProgress?: CourseProgress[];
   courses?: string[];
 }
+
+export type UpdateDataInput = {
+  firstName: string;
+  lastName: string;
+};

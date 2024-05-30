@@ -4,6 +4,8 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
+import { S3 } from 'aws-sdk';
+import { v4 as uuid } from 'uuid';
 
 import isEmpty from 'src/utils/isEmpty';
 import { TMutationResult } from 'src/types/responses';
@@ -20,22 +22,37 @@ import {
   SignUpResponse,
   SignInInput,
   SignInResponse,
+  UpdateDataInput,
 } from './user.dto';
 import Dictionary from 'src/types/dictionary';
+import { PartialUserUpdateProps } from 'src/types/users';
 
 @Injectable()
 export class UsersService {
+  private readonly s3Client = new S3();
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.s3Client.config.update({
+      region: this.configService.get('aws.region'),
+    });
+  }
 
   async getUserData(id: string): Promise<UserDataResponse> {
-    return this.userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id },
     });
+
+    user.avatar = this.s3Client.getSignedUrl('getObject', {
+      Key: user.avatar,
+      Bucket: this.configService.get('aws.utilityBucketName'),
+    });
+
+    return user;
   }
 
   async signUp(input: SignUpInput): Promise<TMutationResult<SignUpResponse>> {
@@ -220,5 +237,39 @@ export class UsersService {
       name: key,
       value: localeValues[key],
     }));
+  }
+
+  async updateData(
+    id: string,
+    body: UpdateDataInput,
+    avatar?: Express.Multer.File,
+  ): Promise<TMutationResult<UserDataResponse>> {
+    const payload: PartialUserUpdateProps = { ...body };
+    const updatedUser = await this.userRepository.findOneBy({ id });
+
+    if (avatar) {
+      payload.avatar = updatedUser.avatar || uuid();
+
+      await this.s3Client
+        .putObject({
+          Key: payload.avatar,
+          Bucket: this.configService.get('aws.utilityBucketName'),
+          Body: avatar.buffer,
+        })
+        .promise();
+    }
+
+    const result = await this.userRepository.update({ id }, payload);
+    updatedUser.firstName = payload.firstName;
+    updatedUser.lastName = payload.lastName;
+    updatedUser.avatar = this.s3Client.getSignedUrl('getObject', {
+      Key: payload.avatar,
+      Bucket: this.configService.get('aws.utilityBucketName'),
+    });
+
+    return {
+      success: result.affected === 1,
+      result: updatedUser,
+    };
   }
 }
