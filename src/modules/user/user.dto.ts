@@ -7,6 +7,7 @@ export class UserDataResponse {
   lastName: string;
   avatar: string;
   type: UserType;
+  isVerified: boolean;
 }
 
 export class SignUpInput {
@@ -21,6 +22,27 @@ export type SignUpResponse = {
   user: UserDataResponse;
   accessToken: string;
 };
+
+export type VerifyUserInput = {
+  code: string;
+};
+
+export type VerifyUserResponse = SignUpResponse;
+
+export type ChangePasswordInput = {
+  oldPassword: string;
+  newPassword: string;
+};
+
+export type RequestPasswordRemindInput = {
+  email: string;
+};
+
+export type RemindPasswordInput = {
+  email: string;
+  code: string;
+  password: string;
+}
 
 export type SignInInput = {
   email: string;
