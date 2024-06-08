@@ -12,6 +12,8 @@ import { UsersModule } from 'src/modules/user/user.module';
 import { CoursesModule } from 'src/modules/course/course.module';
 import { VideoModule } from 'src/modules/video/video.module';
 
+import { MailService } from 'src/modules/mail/mail.service';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -30,10 +32,12 @@ import { VideoModule } from 'src/modules/video/video.module';
         database: configService.get<string>('database.name'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        logging: true,
       }),
       inject: [ConfigService],
     }),
     UsersModule,
+    
     CoursesModule,
     VideoModule,
     PassportModule,
@@ -45,6 +49,7 @@ import { VideoModule } from 'src/modules/video/video.module';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, MailService],
+  exports: [MailService],
 })
 export class AppModule {}
