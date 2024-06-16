@@ -1,8 +1,5 @@
-import { User } from "src/modules/user/user.entity";
-
 export enum UserType {
   STUDENT = 'STUDENT',
-  STUDENT_PREMIUM = 'STUDENT_PREMIUM',
   EDUCATOR = 'EDUCATOR',
 }
 
