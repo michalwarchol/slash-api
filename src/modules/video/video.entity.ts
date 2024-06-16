@@ -10,6 +10,7 @@ import {
 
 import { Course } from 'src/modules/course/course.entity';
 import { User } from 'src/modules/user/user.entity';
+import { UserCourseProgress } from '../statistics/statistics.entity';
 
 @Entity()
 export class CourseVideo {
@@ -46,6 +47,9 @@ export class CourseVideo {
 
   @ManyToOne(() => Course, (course) => course.courseVideos)
   course: Course;
+
+  @ManyToOne(() => UserCourseProgress, (userCourseProgress) => userCourseProgress.courseVideo)
+  userCourseProgress: UserCourseProgress[];
 
   @CreateDateColumn({
     type: 'timestamp',

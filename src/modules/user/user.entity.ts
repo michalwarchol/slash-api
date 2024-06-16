@@ -10,6 +10,7 @@ import {
 import { UserType } from 'src/types/users';
 import { Course } from '../course/course.entity';
 import { VideoComments, VideoRatings } from '../video/video.entity';
+import { UserCourseProgress } from '../statistics/statistics.entity';
 
 export interface IAuthCode {
   id: string;
@@ -86,4 +87,10 @@ export class User implements IUser {
 
   @OneToMany(() => AuthCode, (authCode) => authCode.user)
   authCode: AuthCode[];
+
+  @OneToMany(
+    () => UserCourseProgress,
+    (userCourseProgress) => userCourseProgress.user,
+  )
+  userCourseProgress: UserCourseProgress[];
 }
