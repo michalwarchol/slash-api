@@ -15,10 +15,12 @@ export class StatisticsController {
   createCourse(
     @Request() req,
   ): Promise<EducatorStats | StudentStats> {
+    const userId = req.user.id;
+
     if (req.user.type === UserType.EDUCATOR) {
-      return this.statisticsService.getEducatorStats(req.user.id);
+      return this.statisticsService.getEducatorStats(userId);
     } else {
-      return this.statisticsService.getStudentStats();
+      return this.statisticsService.getStudentStats(userId);
     }
   }
 }

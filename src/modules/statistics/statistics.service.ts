@@ -63,12 +63,94 @@ export class StatisticsService {
     };
   }
 
-  // TODO - implement
-  async getStudentStats(): Promise<StudentStats> {
+  async getStudentStats(userId: string): Promise<StudentStats> {
+    // coursesEnded
+    const coursesEnded = await this.userCourseProgressRepository.count({
+      where: {
+        user: {
+          id: userId,
+        },
+        hasEnded: true,
+      },
+    });
+
+    // coursesInProgress
+    const coursesInProgress = await this.userCourseProgressRepository.count({
+      where: {
+        user: {
+          id: userId,
+        },
+        hasEnded: false,
+      },
+    });
+
+    // watchTime
+    const watchTimeQuery = `
+      SELECT
+        SUM(
+	        CASE
+		        WHEN user_course_progress.hasEnded = False AND course_video.id = video.id THEN user_course_progress.watchTime
+    	      ELSE video.duration
+    	      END
+        ) AS watchTime
+      FROM user_course_progress
+      LEFT JOIN course ON courseId = course.id
+      LEFT JOIN course_video ON course.id = course_video.courseId
+      LEFT JOIN course_video as video ON user_course_progress.courseVideoId = video.id
+      WHERE user_course_progress.userId = ? AND video.createdAt >= course_video.createdAt;`;
+
+    const watchTimeResult = await this.userCourseProgressRepository.query(
+      watchTimeQuery,
+      [userId],
+    );
+
+    const watchTime = watchTimeResult[0].watchTime
+      ? parseInt(watchTimeResult[0].watchTime)
+      : 0;
+
+    // favEducator
+    const favEducatorQuery = `
+      SELECT user.*, count(user.id) AS user_count, user_course_progress.userId
+      FROM user_course_progress
+      LEFT JOIN course ON courseId = course.id
+      LEFT JOIN user ON course.creatorId = user.id
+      GROUP BY user_course_progress.id
+      HAVING user_course_progress.userId = ?
+      ORDER BY user_count DESC
+      LIMIT 1;
+    `;
+    const favEducator = await this.userCourseProgressRepository.query(
+      favEducatorQuery,
+      [userId],
+    );
+    favEducator[0].user_count = undefined;
+    favEducator[0].userId = undefined;
+    favEducator[0].password = undefined;
+    favEducator[0].isVerified = undefined;
+
+    // favCategory
+    const favCategoryQuery = `
+      SELECT course_sub_type.*, count(course_sub_type.id) AS type_count
+      FROM user_course_progress
+      LEFT JOIN course ON courseId = course.id
+      LEFT JOIN course_sub_type ON course.typeId = course_sub_type.id
+      WHERE user_course_progress.userId = ?
+      GROUP BY course_sub_type.id
+      ORDER BY type_count DESC
+      LIMIT 1;
+    `;
+    const favCategory = await this.userCourseProgressRepository.query(
+      favCategoryQuery,
+      [userId],
+    );
+    favCategory[0].type_count = undefined;
+
     return {
-      coursesEnded: 0,
-      coursesInProgress: 0,
-      watchTime: 0,
+      coursesEnded,
+      coursesInProgress,
+      watchTime,
+      favEducator: favEducator[0],
+      favCategory: favCategory[0],
     };
   }
 }

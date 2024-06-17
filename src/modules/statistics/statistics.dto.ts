@@ -12,6 +12,6 @@ export type StudentStats = {
   coursesInProgress: number;
   coursesEnded: number;
   watchTime: number;
-  favCategory?: CourseSubType;
-  favEducator?: User;
+  favCategory: CourseSubType;
+  favEducator: User;
 };
