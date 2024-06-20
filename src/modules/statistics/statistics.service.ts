@@ -2,9 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { Course } from 'src/modules/course/course.entity';
+import { CourseVideo } from 'src/modules/video/video.entity';
+import { TMutationResult } from 'src/types/responses';
+import { TValidationOptions } from 'src/types/validators';
+import RequiredValidator from 'src/validators/RequiredValidator';
+import { validate } from 'src/validators';
+import isEmpty from 'src/utils/isEmpty';
+
+import {
+  EducatorStats,
+  ProgressAddEditInput,
+  ProgressResponse,
+  StudentStats,
+} from './statistics.dto';
 import { UserCourseProgress } from './statistics.entity';
-import { EducatorStats, StudentStats } from './statistics.dto';
-import { Course } from '../course/course.entity';
 
 @Injectable()
 export class StatisticsService {
@@ -14,6 +26,9 @@ export class StatisticsService {
 
     @InjectRepository(Course)
     private courseRepository: Repository<Course>,
+
+    @InjectRepository(CourseVideo)
+    private courseVideoRepository: Repository<CourseVideo>,
   ) {}
 
   async getEducatorStats(creatorId: string): Promise<EducatorStats> {
@@ -151,6 +166,98 @@ export class StatisticsService {
       watchTime,
       favEducator: favEducator[0],
       favCategory: favCategory[0],
+    };
+  }
+
+  async addEditProgress(
+    userId: string,
+    body: ProgressAddEditInput,
+    isEdit: boolean,
+  ): Promise<TMutationResult<ProgressResponse>> {
+    const validators: TValidationOptions = [
+      {
+        field: 'watchTime',
+        validators: [RequiredValidator],
+      },
+      {
+        field: 'hasEnded',
+        validators: [RequiredValidator],
+      },
+      {
+        field: 'videoId',
+        validators: [RequiredValidator],
+      },
+    ];
+
+    if (isEdit) {
+      validators.push({
+        field: 'id',
+        validators: [RequiredValidator],
+      });
+    }
+
+    const errors = validate(body, validators);
+    if (!isEmpty(errors)) {
+      return {
+        success: false,
+        errors,
+      };
+    }
+
+    const video = await this.courseVideoRepository.findOne({
+      where: { id: body.videoId },
+      relations: { course: true },
+    });
+
+    if (!video) {
+      return {
+        success: false,
+        errors: {
+          videoId: 'notFound',
+        },
+      };
+    }
+
+    if (!isEdit) {
+      const isDuplicated = await this.userCourseProgressRepository
+        .createQueryBuilder()
+        .where('userId = :userId', { userId })
+        .andWhere((sq) =>
+          sq
+            .where('courseVideoId = :videoId', { videoId: body.videoId })
+            .orWhere('courseId = :courseId', { courseId: video.course.id }),
+        )
+        .getOne();
+
+      if (isDuplicated) {
+        return {
+          success: false,
+          errors: {
+            videoId: 'duplicated',
+          },
+        };
+      }
+    }
+
+    const userCourseProgress = this.userCourseProgressRepository.create({
+      ...body,
+      user: {
+        id: userId,
+      },
+      course: {
+        id: video.course.id,
+      },
+      courseVideo: {
+        id: body.videoId,
+      },
+    });
+
+    const result =
+      await this.userCourseProgressRepository.save(userCourseProgress);
+
+    return {
+      success: true,
+      result,
     };
   }
 }

@@ -48,7 +48,10 @@ export class CourseVideo {
   @ManyToOne(() => Course, (course) => course.courseVideos)
   course: Course;
 
-  @ManyToOne(() => UserCourseProgress, (userCourseProgress) => userCourseProgress.courseVideo)
+  @OneToMany(
+    () => UserCourseProgress,
+    (userCourseProgress) => userCourseProgress.courseVideo,
+  )
   userCourseProgress: UserCourseProgress[];
 
   @CreateDateColumn({

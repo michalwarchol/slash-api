@@ -15,3 +15,26 @@ export type StudentStats = {
   favCategory: CourseSubType;
   favEducator: User;
 };
+
+export type ProgressAddInput = {
+  hasEnded: boolean;
+  videoId: string;
+  watchTime: number;
+};
+
+export type ProgressEditInput = ProgressAddInput & {
+  id: string;
+}
+
+export type ProgressAddEditInput = ProgressAddInput & {
+  id?: string;
+}
+
+export type ProgressResponse = {
+  id: string;
+  hasEnded: boolean;
+  watchTime: number;
+  user: User;
+  course: Course;
+  courseVideo: CourseVideo;
+};
