@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 
 import { Course } from 'src/modules/course/course.entity';
 import { CourseVideo } from 'src/modules/video/video.entity';
-import { TMutationResult } from 'src/types/responses';
+import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import { TValidationOptions } from 'src/types/validators';
 import RequiredValidator from 'src/validators/RequiredValidator';
 import { validate } from 'src/validators';
@@ -258,6 +258,54 @@ export class StatisticsService {
     return {
       success: true,
       result,
+    };
+  }
+
+  async getUserCourseProgress(
+    userId: string,
+    page: number,
+    perPage: number,
+    withEnded?: boolean,
+  ): Promise<PaginatedQueryResult<ProgressResponse>> {
+    const whereConstraints: FindOptionsWhere<UserCourseProgress> = {
+      user: {
+        id: userId,
+      },
+    }
+
+    if (!withEnded) {
+      whereConstraints.hasEnded = false;
+    }
+
+    const data = await this.userCourseProgressRepository.find({
+      where: whereConstraints,
+      order: {
+        createdAt: 'DESC',
+      },
+      relations: {
+        course: true,
+        courseVideo: true,
+      },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    });
+
+    const total = await this.userCourseProgressRepository.count({
+      where: {
+        user: {
+          id: userId,
+        },
+      },
+    });
+
+    return {
+      data,
+      paginatorInfo: {
+        page,
+        perPage,
+        count: data.length,
+        total,
+      },
     };
   }
 }

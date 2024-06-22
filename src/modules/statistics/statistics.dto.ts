@@ -37,4 +37,5 @@ export type ProgressResponse = {
   user: User;
   course: Course;
   courseVideo: CourseVideo;
+  createdAt: Date;
 };

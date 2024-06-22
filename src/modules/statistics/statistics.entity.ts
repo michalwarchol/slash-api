@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -27,4 +28,10 @@ export class UserCourseProgress {
 
   @ManyToOne(() => CourseVideo, (courseVideo) => courseVideo.userCourseProgress)
   courseVideo: CourseVideo;
+
+  @CreateDateColumn({
+    type: 'timestamp',
+    default: () => 'CURRENT_TIMESTAMP(6)',
+  })
+  createdAt: Date;
 }

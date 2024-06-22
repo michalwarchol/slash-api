@@ -4,6 +4,7 @@ import {
   Get,
   Post,
   Put,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -11,7 +12,7 @@ import {
 import { AuthGuard } from 'src/guards/authGuard';
 import { Roles } from 'src/guards/roles.decorator';
 import { RolesGuard } from 'src/guards/rolesGuard';
-import { TMutationResult } from 'src/types/responses';
+import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import { UserType } from 'src/types/users';
 
 import { StatisticsService } from './statistics.service';
@@ -59,5 +60,18 @@ export class StatisticsController {
     @Body() body: ProgressEditInput,
   ): Promise<TMutationResult<ProgressResponse>> {
     return this.statisticsService.addEditProgress(req.user.id, body, true);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('/progress')
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  getUserCourseProgress(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+    @Query('perPage') hasEnded?: boolean,
+  ): Promise<PaginatedQueryResult<ProgressResponse>> {
+    return this.statisticsService.getUserCourseProgress(req.user.id, parseInt(page), parseInt(perPage), hasEnded);
   }
 }
