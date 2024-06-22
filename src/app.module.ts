@@ -11,6 +11,7 @@ import configuration from './config/configuration';
 import { UsersModule } from 'src/modules/user/user.module';
 import { CoursesModule } from 'src/modules/course/course.module';
 import { VideoModule } from 'src/modules/video/video.module';
+import { StatisticsModule } from 'src/modules/statistics/statistics.module';
 
 import { MailService } from 'src/modules/mail/mail.service';
 
@@ -37,9 +38,9 @@ import { MailService } from 'src/modules/mail/mail.service';
       inject: [ConfigService],
     }),
     UsersModule,
-    
     CoursesModule,
     VideoModule,
+    StatisticsModule,
     PassportModule,
     JwtModule.register({
       secret: configuration().jwt.secret,

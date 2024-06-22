@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { CourseVideo } from '../video/video.entity';
+import { UserCourseProgress } from '../statistics/statistics.entity';
 
 @Entity()
 export class CourseType {
@@ -75,6 +76,9 @@ export class Course {
   @ManyToMany(() => User, (user) => user.likedCourses)
   @JoinTable()
   students: User[];
+
+  @OneToMany(() => UserCourseProgress, (userCourseProgress) => userCourseProgress.course)
+  userCourseProgress: UserCourseProgress[];
 }
 
 @Entity()
