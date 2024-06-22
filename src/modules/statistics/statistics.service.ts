@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { FindOptionsWhere, Repository } from 'typeorm';
+import { S3 } from 'aws-sdk';
 
 import { Course } from 'src/modules/course/course.entity';
 import { CourseVideo } from 'src/modules/video/video.entity';
@@ -20,6 +22,8 @@ import { UserCourseProgress } from './statistics.entity';
 
 @Injectable()
 export class StatisticsService {
+  private readonly s3Client = new S3();
+
   constructor(
     @InjectRepository(UserCourseProgress)
     private userCourseProgressRepository: Repository<UserCourseProgress>,
@@ -29,7 +33,13 @@ export class StatisticsService {
 
     @InjectRepository(CourseVideo)
     private courseVideoRepository: Repository<CourseVideo>,
-  ) {}
+
+    private readonly configService: ConfigService,
+  ) {
+    this.s3Client.config.update({
+      region: this.configService.get('aws.region'),
+    });
+  }
 
   async getEducatorStats(creatorId: string): Promise<EducatorStats> {
     const mostLikedCoursesQuery = `
@@ -142,6 +152,10 @@ export class StatisticsService {
     favEducator[0].userId = undefined;
     favEducator[0].password = undefined;
     favEducator[0].isVerified = undefined;
+    favEducator[0].avatar = this.s3Client.getSignedUrl('getObject', {
+      Key: favEducator[0].avatar,
+      Bucket: this.configService.get('aws.utilityBucketName'),
+    });
 
     // favCategory
     const favCategoryQuery = `
@@ -271,7 +285,7 @@ export class StatisticsService {
       user: {
         id: userId,
       },
-    }
+    };
 
     if (!withEnded) {
       whereConstraints.hasEnded = false;
