@@ -232,22 +232,62 @@ export class StatisticsService {
       };
     }
 
-    if (!isEdit) {
-      const isDuplicated = await this.userCourseProgressRepository
-        .createQueryBuilder()
-        .where('userId = :userId', { userId })
-        .andWhere((sq) =>
-          sq
-            .where('courseVideoId = :videoId', { videoId: body.videoId })
-            .orWhere('courseId = :courseId', { courseId: video.course.id }),
-        )
-        .getOne();
+    const previousProgress = await this.userCourseProgressRepository
+      .createQueryBuilder('userCourseProgress')
+      .leftJoinAndMapOne(
+        'userCourseProgress.courseVideo',
+        CourseVideo,
+        'courseVideo',
+        'userCourseProgress.courseVideoId = courseVideo.id',
+      )
+      .where('userId = :userId', { userId })
+      .andWhere((sq) =>
+        sq
+          .where('userCourseProgress.courseVideoId = :videoId', {
+            videoId: body.videoId,
+          })
+          .orWhere('userCourseProgress.courseId = :courseId', {
+            courseId: video.course.id,
+          }),
+      )
+      .getOne();
 
-      if (isDuplicated) {
+    console.log(previousProgress);
+
+    if (!isEdit && previousProgress) {
+      return {
+        success: false,
+        errors: {
+          videoId: 'duplicated',
+        },
+      };
+    }
+
+    // check if user wants to rewind his progress. If so, omit updating
+    if (isEdit) {
+      if (
+        previousProgress.courseVideo.id === video.id &&
+        previousProgress.watchTime >= body.watchTime
+      ) {
         return {
-          success: false,
-          errors: {
-            videoId: 'duplicated',
+          success: true,
+          result: {
+            ...previousProgress,
+            courseVideo: undefined,
+          },
+        };
+      }
+
+      if (
+        previousProgress.courseVideo.id !== video.id &&
+        previousProgress.courseVideo.createdAt.getTime() >=
+          video.createdAt.getTime()
+      ) {
+        return {
+          success: true,
+          result: {
+            ...previousProgress,
+            courseVideo: undefined,
           },
         };
       }

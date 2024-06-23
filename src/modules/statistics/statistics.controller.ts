@@ -30,7 +30,7 @@ export class StatisticsController {
 
   @UseGuards(AuthGuard)
   @Get('/')
-  createCourse(@Request() req): Promise<EducatorStats | StudentStats> {
+  getStats(@Request() req): Promise<EducatorStats | StudentStats> {
     const userId = req.user.id;
 
     if (req.user.type === UserType.EDUCATOR) {
