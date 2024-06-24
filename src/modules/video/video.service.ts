@@ -241,7 +241,7 @@ export class VideoService {
     id: string,
     authorId: string,
   ): Promise<CourseVideoRateResponse> {
-    return this.videoRatingsRepository.findOne({
+    const rating = await this.videoRatingsRepository.findOne({
       where: {
         video: {
           id,
@@ -251,6 +251,13 @@ export class VideoService {
         },
       },
     });
+
+    if (!rating) {
+      return {
+        rating: null,
+      };
+    }
+    return { rating };
   }
 
   async addEditComment(
@@ -368,7 +375,7 @@ export class VideoService {
 
     return {
       success: true,
-      result: rate,
+      result: { rating: rate },
     };
   }
 }

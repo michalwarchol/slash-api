@@ -49,6 +49,8 @@ export type CourseVideoRateInput = {
 };
 
 export type CourseVideoRateResponse = {
-  id: string;
-  rating: number;
+  rating: {
+    id: string;
+    rating: number;
+  };
 };
