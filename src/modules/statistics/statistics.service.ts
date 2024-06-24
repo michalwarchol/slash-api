@@ -252,8 +252,6 @@ export class StatisticsService {
       )
       .getOne();
 
-    console.log(previousProgress);
-
     if (!isEdit && previousProgress) {
       return {
         success: false,
@@ -361,5 +359,35 @@ export class StatisticsService {
         total,
       },
     };
+  }
+
+  async getOneUserCourseProgress(
+    userId: string,
+    courseId: string,
+  ): Promise<UserCourseProgress> {
+    const progress = await this.userCourseProgressRepository.findOne({
+      where: {
+        user: {
+          id: userId,
+        },
+        course: {
+          id: courseId,
+        },
+      },
+      relations: {
+        course: true,
+        courseVideo: true,
+      },
+    });
+
+    progress.courseVideo.thumbnailLink = this.s3Client.getSignedUrl(
+      'getObject',
+      {
+        Key: progress.courseVideo.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      },
+    );
+
+    return progress;
   }
 }

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Put,
   Query,
@@ -70,8 +71,24 @@ export class StatisticsController {
     @Request() req,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
-    @Query('perPage') hasEnded?: boolean,
+    @Query('hasEnded') hasEnded?: boolean,
   ): Promise<PaginatedQueryResult<ProgressResponse>> {
-    return this.statisticsService.getUserCourseProgress(req.user.id, parseInt(page), parseInt(perPage), hasEnded);
+    return this.statisticsService.getUserCourseProgress(
+      req.user.id,
+      parseInt(page),
+      parseInt(perPage),
+      hasEnded,
+    );
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('/progress/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  getOneUserCourseProgress(
+    @Request() req,
+    @Param('id') id: string,
+  ): Promise<ProgressResponse> {
+    return this.statisticsService.getOneUserCourseProgress(req.user.id, id);
   }
 }
