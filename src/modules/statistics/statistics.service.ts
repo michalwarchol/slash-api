@@ -335,7 +335,12 @@ export class StatisticsService {
         createdAt: 'DESC',
       },
       relations: {
-        course: true,
+        course: {
+          creator: true,
+          type: {
+            mainType: true,
+          },
+        },
         courseVideo: true,
       },
       skip: (page - 1) * perPage,
@@ -348,6 +353,18 @@ export class StatisticsService {
           id: userId,
         },
       },
+    });
+
+    data.forEach((item) => {
+      item.courseVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
+        Key: item.courseVideo.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      });
+
+      item.course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
+        Key: item.course.creator.avatar,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      });
     });
 
     return {
