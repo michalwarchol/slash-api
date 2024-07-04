@@ -253,7 +253,7 @@ export class CoursesService {
     const realPerPage = perPage || 10;
 
     const query = `
-      SELECT 
+      SELECT
         subType.id as subType_id,
         subType.name as subType_name,
         subType.valuePl as subType_valuePl,
@@ -264,8 +264,8 @@ export class CoursesService {
         type.valueEn as type_valueEn,
         course.id as id,
         course.name as name,
-        COUNT(courseVideo.id) as numberOfVideos,
-        COUNT(courseStudentsUser.userId) as numberOfLikes
+        COUNT(DISTINCT courseVideo.id) as numberOfVideos,
+        COUNT(DISTINCT courseStudentsUser.userId) as numberOfLikes
       FROM course
       LEFT JOIN course_sub_type subType ON typeId = subType.id
       LEFT JOIN course_type type ON subType.mainTypeId = type.id

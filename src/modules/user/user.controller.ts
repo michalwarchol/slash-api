@@ -14,6 +14,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TMutationResult } from 'src/types/responses';
 import { AuthGuard } from 'src/guards/authGuard';
+import { AuthNotVerifiedGuard } from 'src/guards/authNotVerifiedGuard';
 
 import {
   SignUpInput,
@@ -50,7 +51,7 @@ export class UserController {
   }
 
   @Post('verify-user')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthNotVerifiedGuard)
   verifyUser(
     @Request() req,
     @Body() body: VerifyUserInput,
