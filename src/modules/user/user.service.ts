@@ -68,10 +68,12 @@ export class UsersService {
       where: { id },
     });
 
-    user.avatar = this.s3Client.getSignedUrl('getObject', {
-      Key: user.avatar,
-      Bucket: this.configService.get('aws.utilityBucketName'),
-    });
+    user.avatar = user.avatar
+      ? this.s3Client.getSignedUrl('getObject', {
+          Key: user.avatar,
+          Bucket: this.configService.get('aws.utilityBucketName'),
+        })
+      : null;
 
     return user;
   }
@@ -297,7 +299,12 @@ export class UsersService {
       result: {
         user: {
           id: user.id,
-          avatar: user.avatar,
+          avatar: user.avatar
+            ? this.s3Client.getSignedUrl('getObject', {
+                Key: user.avatar,
+                Bucket: this.configService.get('aws.utilityBucketName'),
+              })
+            : null,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -615,10 +622,13 @@ export class UsersService {
     const result = await this.userRepository.update({ id }, payload);
     updatedUser.firstName = payload.firstName;
     updatedUser.lastName = payload.lastName;
-    updatedUser.avatar = this.s3Client.getSignedUrl('getObject', {
-      Key: payload.avatar,
-      Bucket: this.configService.get('aws.utilityBucketName'),
-    });
+
+    if (payload.avatar || updatedUser.avatar) {
+      updatedUser.avatar = this.s3Client.getSignedUrl('getObject', {
+        Key: payload.avatar || updatedUser.avatar,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      });
+    }
 
     return {
       success: result.affected === 1,

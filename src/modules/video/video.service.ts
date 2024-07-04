@@ -198,6 +198,10 @@ export class VideoService {
       },
     });
 
+    if (!video) {
+      throw new NotFoundException();
+    }
+
     video.link = this.s3Client.getSignedUrl('getObject', {
       Key: video.link,
       Bucket: this.configService.get('aws.videoBucketName'),
