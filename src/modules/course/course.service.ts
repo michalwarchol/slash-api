@@ -10,7 +10,6 @@ import { Repository } from 'typeorm';
 import { S3 } from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
 import { Readable } from 'stream';
-import { getVideoDurationInSeconds } from 'get-video-duration';
 
 import { TValidationOptions } from 'src/types/validators';
 import RequiredValidator from 'src/validators/RequiredValidator';
@@ -19,7 +18,7 @@ import isEmpty from 'src/utils/isEmpty';
 import { User } from 'src/modules/user/user.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import withPercentage from 'src/utils/withPercentage';
-import bufferToReadable from 'src/utils/bufferToReadable';
+import { mapRawCourseResponse } from 'src/utils/courseUtils';
 
 import {
   CourseResponse,
@@ -30,6 +29,7 @@ import {
   CourseUserStatistics,
   UserCourseWithStats,
   CourseMaterial,
+  CourseResult,
 } from './course.dto';
 import {
   Course,
@@ -37,6 +37,7 @@ import {
   CourseSubType,
   CourseType,
 } from './course.entity';
+import { CourseVideo } from '../video/video.entity';
 
 @Injectable()
 export class CoursesService {
@@ -51,6 +52,9 @@ export class CoursesService {
 
     @InjectRepository(CourseMaterials)
     private courseMaterialsRepository: Repository<CourseMaterials>,
+
+    @InjectRepository(CourseVideo)
+    private courseVideoRepository: Repository<CourseVideo>,
 
     private readonly configService: ConfigService,
   ) {
@@ -206,35 +210,69 @@ export class CoursesService {
 
   async search(
     searchString: string,
+    typeName: string,
     lang: string,
     page?: number,
     perPage?: number,
-  ): Promise<PaginatedQueryResult<Course>> {
+  ): Promise<PaginatedQueryResult<CourseResult>> {
     const langValue = lang === 'pl' ? 'valuePl' : 'valueEn';
     const realPage = page || 1;
     const realPerPage = perPage || 10;
     const realSearchString = withPercentage(searchString);
 
-    const courses = await this.courseRepository
+    const query = this.courseRepository
       .createQueryBuilder('course')
-      .leftJoinAndSelect(CourseSubType, 'type', 'course.typeId = type.id')
-      .where('course.name LIKE :search', { search: realSearchString })
-      .orWhere(`type.${langValue} LIKE :search`, { search: realSearchString })
+      .leftJoinAndSelect('course.creator', 'creator')
+      .leftJoinAndSelect('course.type', 'type')
+      .where('course.name LIKE :search', { search: realSearchString });
+
+    if (typeName) {
+      query.andWhere(`type.${langValue} = :typeName`, { typeName });
+    }
+
+    query
       .skip((realPage - 1) * realPerPage)
       .take(realPerPage)
       .getMany();
 
-    const total = await this.courseRepository
+    const courses = await query.getMany();
+
+    const data = await Promise.all(
+      courses.map(async (course) => {
+        const additionalCourseData = await this.getCourseAdditionalData(
+          course.id,
+        );
+
+        if (course.creator.avatar) {
+          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
+            Key: course.creator.avatar,
+            Bucket: this.configService.get('aws.utilityBucketName'),
+          });
+        }
+
+        return {
+          course,
+          ...additionalCourseData,
+        };
+      }),
+    );
+
+    const totalQuery = this.courseRepository
       .createQueryBuilder('course')
-      .leftJoinAndSelect(CourseSubType, 'type', 'course.typeId = type.id')
-      .where('course.name LIKE :search', { search: realSearchString })
-      .orWhere(`type.${langValue} LIKE :search`, { search: realSearchString })
-      .getCount();
+      .leftJoinAndSelect('course.creator', 'creator')
+      .leftJoinAndSelect('course.type', 'type')
+      .where('course.name LIKE :search', { search: realSearchString });
+
+    if (typeName) {
+      totalQuery.andWhere(`type.${langValue} = :typeName`, { typeName });
+    }
+
+    const total = await totalQuery.getCount();
 
     return {
-      data: courses,
+      data,
       paginatorInfo: {
-        count: courses.length,
+        count: data.length,
         page: realPage,
         perPage: realPerPage,
         total,
@@ -517,6 +555,99 @@ export class CoursesService {
     return {
       success: true,
       result: result.affected > 0,
+    };
+  }
+
+  private async getCourseAdditionalData(courseId: string) {
+    const firstVideo = await this.courseVideoRepository.findOne({
+      where: { course: { id: courseId } },
+      order: {
+        createdAt: 'ASC',
+      },
+    });
+
+    if (firstVideo) {
+      firstVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
+        Key: firstVideo.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      });
+    }
+
+    const totalVideos = await this.courseVideoRepository
+      .createQueryBuilder('courseVideo')
+      .select('courseVideo.courseId')
+      .where('courseVideo.courseId = :id', { id: courseId })
+      .groupBy('courseVideo.courseId')
+      .getCount();
+
+    return {
+      firstVideo,
+      totalVideos,
+    };
+  }
+
+  async getBestCoursesByCategoryName(
+    name: string,
+    page: number,
+    perPage: number,
+  ): Promise<PaginatedQueryResult<CourseResult>> {
+    const realPage = page || 1;
+    const realPerPage = perPage || 10;
+
+    const subquery = `
+      SELECT courseId, COUNT(*) AS count
+      FROM course_students_user
+      GROUP BY courseId
+      ORDER BY count DESC
+      LIMIT ${realPerPage} OFFSET ${(realPage - 1) * realPerPage}
+    `;
+
+    const courses = await this.courseRepository
+      .createQueryBuilder('course')
+      .addSelect('COALESCE(subquery.count, 0)', 'count')
+      .leftJoin(`(${subquery})`, 'subquery', 'course.id = subquery.courseId')
+      .leftJoinAndSelect('course.creator', 'creator')
+      .leftJoinAndSelect('course.type', 'course_sub_type')
+      .where('course_sub_type.name = :subTypeName', { subTypeName: name })
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    const mappedCourses = courses.map((course) => mapRawCourseResponse(course));
+
+    const additionalData = await Promise.all(
+      mappedCourses.map(async (course) => {
+        const additionalCourseData = await this.getCourseAdditionalData(
+          course.id,
+        );
+        if (course.creator.avatar) {
+          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
+            Key: course.creator.avatar,
+            Bucket: this.configService.get('aws.utilityBucketName'),
+          });
+        }
+
+        return {
+          course,
+          ...additionalCourseData,
+        };
+      }),
+    );
+
+    const total = await this.courseRepository
+      .createQueryBuilder('course')
+      .innerJoin(`(${subquery})`, 'subquery', 'course.id = subquery.courseId')
+      .leftJoinAndSelect('course.type', 'course_sub_type')
+      .where('course_sub_type.name = :subTypeName', { subTypeName: name })
+      .getCount();
+
+    return {
+      data: additionalData,
+      paginatorInfo: {
+        count: additionalData.length,
+        page: realPage,
+        perPage: realPerPage,
+        total,
+      },
     };
   }
 }
