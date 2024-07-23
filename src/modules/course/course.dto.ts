@@ -1,5 +1,8 @@
-import { User } from '../user/user.entity';
-import { CourseVideo } from '../video/video.entity';
+import { User } from 'src/modules/user/user.entity';
+import { UserDataResponse } from 'src/modules/user/user.dto';
+import { CourseVideoResponse } from 'src/modules/video/video.dto';
+import { CourseVideo } from 'src/modules/video/video.entity';
+
 import { CourseMaterials, CourseSubType } from './course.entity';
 
 export type CourseTypesResponse = {
@@ -30,7 +33,7 @@ export type CourseResponse = {
   id: string;
   name: string;
   description: string;
-  creator: User;
+  creator: UserDataResponse;
   type: CourseSubType;
 };
 
@@ -69,4 +72,21 @@ export type CourseMaterial = {
   link: string;
   type: string;
   size: number;
+};
+
+export type CourseResult = {
+  course: {
+    id: string;
+    name: string;
+    description: string;
+    creator: UserDataResponse;
+    type: {
+      id: string;
+      name: string;
+      valuePl: string;
+      valueEn: string;
+    };
+  };
+  firstVideo: CourseVideoResponse;
+  totalVideos: number;
 };

@@ -32,6 +32,7 @@ import {
   LikeCourseInput,
   UserCourseWithStats,
   CourseMaterial,
+  CourseResult,
 } from './course.dto';
 import { CoursesService } from './course.service';
 import { Roles } from 'src/guards/roles.decorator';
@@ -53,11 +54,13 @@ export class CourseController {
   searchCourses(
     @Request() req,
     @Query('search') searchString: string,
+    @Query('typeName') typeName: string,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
-  ): Promise<PaginatedQueryResult<Course>> {
+  ): Promise<PaginatedQueryResult<CourseResult>> {
     return this.coursesService.search(
       searchString,
+      typeName,
       req.headers.lang || 'en',
       parseInt(page),
       parseInt(perPage),
@@ -174,5 +177,18 @@ export class CourseController {
     @Param('id') id: string,
   ): Promise<TMutationResult<boolean>> {
     return this.coursesService.deleteMaterialFile(req.user.id, id);
+  }
+
+  @Get('by-category-name')
+  getBestCoursesByCategoryName(
+    @Query('name') name: string,
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+  ): Promise<PaginatedQueryResult<CourseResult>> {
+    return this.coursesService.getBestCoursesByCategoryName(
+      name,
+      parseInt(page),
+      parseInt(perPage),
+    );
   }
 }

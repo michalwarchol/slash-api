@@ -67,9 +67,6 @@ export class UserResponse {
   permissions: string[];
   avatar?: string;
   type: UserType;
-  lastBillingDate?: Date;
-  nextBillingDate?: Date;
-  savedCourses?: string[];
   coursesInProgress?: CourseProgress[];
   courses?: string[];
 }
