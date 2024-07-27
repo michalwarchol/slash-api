@@ -24,6 +24,7 @@ import {
   ProgressResponse,
   StudentStats,
 } from './statistics.dto';
+import { CourseResult } from '../course/course.dto';
 
 @Controller('statistics')
 export class StatisticsController {
@@ -90,5 +91,21 @@ export class StatisticsController {
     @Param('id') id: string,
   ): Promise<ProgressResponse> {
     return this.statisticsService.getOneUserCourseProgress(req.user.id, id);
+  }
+
+  @UseGuards(AuthGuard)
+  @UseGuards(RolesGuard)
+  @Roles(UserType.STUDENT)
+  @Get('recommended')
+  getRecommended(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('perPage') perPage?: string,
+  ): Promise<PaginatedQueryResult<CourseResult>> {
+    return this.statisticsService.getRecommended(
+      req.user.id,
+      parseInt(page),
+      parseInt(perPage),
+    );
   }
 }

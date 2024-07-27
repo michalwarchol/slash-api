@@ -79,6 +79,8 @@ export class Course {
 
   @OneToMany(() => UserCourseProgress, (userCourseProgress) => userCourseProgress.course)
   userCourseProgress: UserCourseProgress[];
+
+  popularity?: number;
 }
 
 @Entity()

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Brackets, FindOptionsWhere, Repository } from 'typeorm';
 import { S3 } from 'aws-sdk';
 
 import { Course } from 'src/modules/course/course.entity';
@@ -19,6 +19,7 @@ import {
   StudentStats,
 } from './statistics.dto';
 import { UserCourseProgress } from './statistics.entity';
+import { CourseResult } from '../course/course.dto';
 
 @Injectable()
 export class StatisticsService {
@@ -406,5 +407,141 @@ export class StatisticsService {
     );
 
     return progress;
+  }
+
+  private async getCourseAdditionalData(courseId: string) {
+    const firstVideo = await this.courseVideoRepository.findOne({
+      where: { course: { id: courseId } },
+      order: {
+        createdAt: 'ASC',
+      },
+    });
+
+    if (firstVideo) {
+      firstVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
+        Key: firstVideo.thumbnailLink,
+        Bucket: this.configService.get('aws.utilityBucketName'),
+      });
+    }
+
+    const totalVideos = await this.courseVideoRepository
+      .createQueryBuilder('courseVideo')
+      .select('courseVideo.courseId')
+      .where('courseVideo.courseId = :id', { id: courseId })
+      .groupBy('courseVideo.courseId')
+      .getCount();
+
+    return {
+      firstVideo,
+      totalVideos,
+    };
+  }
+
+  async getRecommended(
+    userId: string,
+    page: number,
+    perPage: number,
+  ): Promise<PaginatedQueryResult<CourseResult>> {
+    const userCourses = await this.userCourseProgressRepository.find({
+      where: { user: { id: userId } },
+      relations: ['course', 'course.type', 'course.creator'],
+    });
+
+    const categories = userCourses.map((uc) => uc.course.type.id);
+    const creators = userCourses.map((uc) => uc.course.creator.id);
+
+    const subQuery = this.userCourseProgressRepository
+      .createQueryBuilder('user_course')
+      .select('user_course.courseId')
+      .where('user_course.userId = :userId', { userId });
+
+    const recommendedCourses = await this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.type', 'type')
+      .leftJoinAndSelect('course.creator', 'creator')
+      .addSelect((qb) => {
+        return qb
+          .select('COUNT(course_students_user.courseId)', 'popularity')
+          .from('course_students_user', 'course_students_user')
+          .where('course_students_user.courseId = course.id');
+      }, 'popularity')
+      .where(`course.id NOT IN (${subQuery.getQuery()})`)
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('course.typeId IN (:...categories)', {
+            categories,
+          }).orWhere('course.creatorId IN (:...creators)', { creators });
+        }),
+      )
+      .setParameters(subQuery.getParameters())
+      .orderBy('popularity', 'DESC')
+      .skip((page - 1) * perPage)
+      .take(perPage)
+      .getRawAndEntities();
+
+    const scoredCourses = recommendedCourses.entities.map((course, index) => {
+      let score = 0;
+
+      if (categories.includes(course.type.id)) {
+        score += 0.5;
+      }
+
+      if (creators.includes(course.creator.id)) {
+        score += 0.3;
+      }
+
+      const popularityCount =
+        parseInt(recommendedCourses.raw[index].popularity, 10) || 0;
+      score += (popularityCount / 100) * 0.2;
+
+      return { course, score };
+    });
+
+    scoredCourses.sort((a, b) => b.score - a.score);
+    const data = scoredCourses.map((sc) => sc.course);
+
+    const additionalData = await Promise.all(
+      data.map(async (course) => {
+        const additionalCourseData = await this.getCourseAdditionalData(
+          course.id,
+        );
+        if (course.creator.avatar) {
+          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
+            Key: course.creator.avatar,
+            Bucket: this.configService.get('aws.utilityBucketName'),
+          });
+        }
+
+        return {
+          course,
+          ...additionalCourseData,
+        };
+      }),
+    );
+
+    const total = await this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.type', 'type')
+      .leftJoinAndSelect('course.creator', 'creator')
+      .where(`course.id NOT IN (${subQuery.getQuery()})`)
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('course.typeId IN (:...categories)', {
+            categories,
+          }).orWhere('course.creatorId IN (:...creators)', { creators });
+        }),
+      )
+      .setParameters(subQuery.getParameters())
+      .getCount();
+
+    return {
+      data: additionalData,
+      paginatorInfo: {
+        count: additionalData.length,
+        page,
+        perPage,
+        total,
+      },
+    };
   }
 }
