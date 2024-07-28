@@ -282,11 +282,13 @@ export class UsersService {
     const emailHtmlFunc =
       lang === 'pl' ? accountActivationTemplatePl : accountActivationTemplateEn;
     try {
-      await this.mailService.sendEmail(
-        input.email,
-        lang === 'pl' ? titleActivationPl : titleActivationEn,
-        emailHtmlFunc(user.firstName, code),
-      );
+      if (!user.isVerified) {
+        await this.mailService.sendEmail(
+          input.email,
+          lang === 'pl' ? titleActivationPl : titleActivationEn,
+          emailHtmlFunc(user.firstName, code),
+        );
+      }
     } catch (error) {
       return {
         success: false,
