@@ -8,9 +8,13 @@ import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { S3 } from 'aws-sdk';
 import { v4 as uuid } from 'uuid';
+import getVideoDurationInSeconds from 'get-video-duration';
 
 import { CourseVideo, VideoComments, VideoRatings } from './video.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
+import bufferToReadable from 'src/utils/bufferToReadable';
+import { createS3ObjectLink } from 'src/utils/createS3ObjectLink';
+
 import {
   CourseVideoCommentResponse,
   CourseVideoFullResponse,
@@ -19,8 +23,6 @@ import {
   CourseVideoRateResponse,
   CourseVideoResponse,
 } from './video.dto';
-import bufferToReadable from 'src/utils/bufferToReadable';
-import getVideoDurationInSeconds from 'get-video-duration';
 import { Course } from '../course/course.entity';
 
 @Injectable()
@@ -70,6 +72,7 @@ export class VideoService {
         Key: thumbnailKey,
         Bucket: this.configService.get('aws.utilityBucketName'),
         Body: thumbnail.buffer,
+        ACL: 'public-read',
       })
       .promise();
 
@@ -81,6 +84,7 @@ export class VideoService {
         Key: videoKey,
         Bucket: this.configService.get('aws.videoBucketName'),
         Body: video.buffer,
+        ACL: 'public-read',
       })
       .promise();
 
@@ -202,21 +206,21 @@ export class VideoService {
       throw new NotFoundException();
     }
 
-    video.link = this.s3Client.getSignedUrl('getObject', {
-      Key: video.link,
-      Bucket: this.configService.get('aws.videoBucketName'),
-    });
+    video.link = createS3ObjectLink(
+      this.configService.get('aws.videoBucketName'),
+      video.link,
+    );
 
-    video.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
-      Key: video.thumbnailLink,
-      Bucket: this.configService.get('aws.utilityBucketName'),
-    });
+    video.thumbnailLink = createS3ObjectLink(
+      this.configService.get('aws.utilityBucketName'),
+      video.thumbnailLink,
+    );
 
     if (video.course.creator.avatar) {
-      video.course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
-        Key: video.course.creator.avatar,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      video.course.creator.avatar = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        video.course.creator.avatar,
+      );
     }
 
     const previousVideo = await this.courseVideoRepository.query(
@@ -316,10 +320,10 @@ export class VideoService {
     comments = comments.map((comment) => {
       const avatarLink =
         comment.author.avatar &&
-        this.s3Client.getSignedUrl('getObject', {
-          Key: comment.author.avatar,
-          Bucket: this.configService.get('aws.utilityBucketName'),
-        });
+        createS3ObjectLink(
+          this.configService.get('aws.utilityBucketName'),
+          comment.author.avatar,
+        );
 
       return {
         ...comment,

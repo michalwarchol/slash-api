@@ -25,7 +25,7 @@ export class MailService {
       .setTo(recipients)
       .setSubject(subject)
       .setText('')
-      .setHtml(html)
+      .setHtml(html);
 
     this.mailerSend.email
       .send(emailParams)

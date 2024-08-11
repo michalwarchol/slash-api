@@ -19,6 +19,7 @@ import { User } from 'src/modules/user/user.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import withPercentage from 'src/utils/withPercentage';
 import { mapRawCourseResponse } from 'src/utils/courseUtils';
+import { createS3ObjectLink } from 'src/utils/createS3ObjectLink';
 
 import {
   CourseResponse,
@@ -190,16 +191,14 @@ export class CoursesService {
 
     course.courseVideos = course.courseVideos.map((video) => ({
       ...video,
-      link: this.s3Client.getSignedUrl('getObject', {
-        Key: video.link,
-        Bucket: this.configService.get('aws.videoBucketName'),
-        Expires: 6000,
-      }),
-      thumbnailLink: this.s3Client.getSignedUrl('getObject', {
-        Key: video.thumbnailLink,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-        Expires: 6000,
-      }),
+      link: createS3ObjectLink(
+        this.configService.get('aws.videoBucketName'),
+        video.link,
+      ),
+      thumbnailLink: createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        video.thumbnailLink,
+      ),
     }));
 
     return {
@@ -244,10 +243,10 @@ export class CoursesService {
         );
 
         if (course.creator.avatar) {
-          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
-            Key: course.creator.avatar,
-            Bucket: this.configService.get('aws.utilityBucketName'),
-          });
+          course.creator.avatar = createS3ObjectLink(
+            this.configService.get('aws.utilityBucketName'),
+            course.creator.avatar,
+          );
         }
 
         return {
@@ -478,6 +477,7 @@ export class CoursesService {
         Key: fileKey,
         Bucket: this.configService.get('aws.utilityBucketName'),
         Body: file.buffer,
+        ACL: 'public-read',
       })
       .promise();
 
@@ -567,10 +567,10 @@ export class CoursesService {
     });
 
     if (firstVideo) {
-      firstVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
-        Key: firstVideo.thumbnailLink,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      firstVideo.thumbnailLink = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        firstVideo.thumbnailLink,
+      );
     }
 
     const totalVideos = await this.courseVideoRepository
@@ -620,10 +620,10 @@ export class CoursesService {
           course.id,
         );
         if (course.creator.avatar) {
-          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
-            Key: course.creator.avatar,
-            Bucket: this.configService.get('aws.utilityBucketName'),
-          });
+          course.creator.avatar = createS3ObjectLink(
+            this.configService.get('aws.utilityBucketName'),
+            course.creator.avatar,
+          );
         }
 
         return {

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Course } from '../course/course.entity';
+
+import { Course } from 'src/modules/course/course.entity';
+
 import { CourseVideo, VideoRatings, VideoComments } from './video.entity';
 import { VideoController } from './video.controller';
 import { VideoService } from './video.service';
