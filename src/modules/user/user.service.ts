@@ -14,9 +14,13 @@ import { validate } from 'src/validators';
 import PasswordValidator from 'src/validators/PasswordValidator';
 import RequiredValidator from 'src/validators/RequiredValidator';
 import IsEmailValidator from 'src/validators/IsEmailValidator';
+import IsDateBeforeValidator from 'src/validators/IsDateBeforeValidator';
 import Dictionary from 'src/types/dictionary';
 import { PartialUserUpdateProps } from 'src/types/users';
+import generateAuthCode from 'src/utils/generateAuthCode';
+import formatDateToString from 'src/utils/formatDateToString';
 import { MailService } from 'src/modules/mail/mail.service';
+import { createS3ObjectLink } from 'src/utils/createS3ObjectLink';
 import accountActivationTemplatePl, {
   title as titleActivationPl,
 } from 'src/templates/accountActivationTemplatePl';
@@ -40,10 +44,6 @@ import {
   VerifyUserResponse,
 } from './user.dto';
 import { AuthCode, User } from './user.entity';
-import generateAuthCode from 'src/utils/generateAuthCode';
-import IsDateBeforeValidator from 'src/validators/IsDateBeforeValidator';
-import formatDateToString from 'src/utils/formatDateToString';
-import passwordChangeTemplate from 'src/templates/passwordChangeTemplatePl';
 
 @Injectable()
 export class UsersService {
@@ -68,12 +68,12 @@ export class UsersService {
       where: { id },
     });
 
-    user.avatar = user.avatar
-      ? this.s3Client.getSignedUrl('getObject', {
-          Key: user.avatar,
-          Bucket: this.configService.get('aws.utilityBucketName'),
-        })
-      : null;
+    if (user.avatar) {
+      user.avatar = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        user.avatar,
+      );
+    }
 
     return user;
   }
@@ -302,10 +302,10 @@ export class UsersService {
         user: {
           id: user.id,
           avatar: user.avatar
-            ? this.s3Client.getSignedUrl('getObject', {
-                Key: user.avatar,
-                Bucket: this.configService.get('aws.utilityBucketName'),
-              })
+            ? createS3ObjectLink(
+                this.configService.get('aws.utilityBucketName'),
+                user.avatar,
+              )
             : null,
           email: user.email,
           firstName: user.firstName,
@@ -617,6 +617,7 @@ export class UsersService {
           Key: payload.avatar,
           Bucket: this.configService.get('aws.utilityBucketName'),
           Body: avatar.buffer,
+          ACL: 'public-read',
         })
         .promise();
     }
@@ -626,10 +627,10 @@ export class UsersService {
     updatedUser.lastName = payload.lastName;
 
     if (payload.avatar || updatedUser.avatar) {
-      updatedUser.avatar = this.s3Client.getSignedUrl('getObject', {
-        Key: payload.avatar || updatedUser.avatar,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      updatedUser.avatar = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        payload.avatar || updatedUser.avatar,
+      );
     }
 
     return {
