@@ -12,12 +12,8 @@ import {
   UploadedFile,
   UseInterceptors,
   Res,
-  UploadedFiles,
 } from '@nestjs/common';
-import {
-  FileFieldsInterceptor,
-  FileInterceptor,
-} from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
