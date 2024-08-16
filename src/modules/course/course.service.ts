@@ -189,17 +189,19 @@ export class CoursesService {
       'SELECT count(*) AS count FROM course_students_user WHERE courseId = ?';
     const likesCount = await this.courseRepository.query(likesCountQuery, [id]);
 
-    course.courseVideos = course.courseVideos.map((video) => ({
-      ...video,
-      link: createS3ObjectLink(
-        this.configService.get('aws.videoBucketName'),
-        video.link,
-      ),
-      thumbnailLink: createS3ObjectLink(
-        this.configService.get('aws.utilityBucketName'),
-        video.thumbnailLink,
-      ),
-    }));
+    course.courseVideos = course.courseVideos
+      .map((video) => ({
+        ...video,
+        link: createS3ObjectLink(
+          this.configService.get('aws.videoBucketName'),
+          video.link,
+        ),
+        thumbnailLink: createS3ObjectLink(
+          this.configService.get('aws.utilityBucketName'),
+          video.thumbnailLink,
+        ),
+      }))
+      .sort((a, b) => (a.createdAt <= b.createdAt ? -1 : 1));
 
     return {
       ...course,
