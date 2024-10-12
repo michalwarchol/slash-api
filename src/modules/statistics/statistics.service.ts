@@ -9,6 +9,7 @@ import { CourseVideo } from 'src/modules/video/video.entity';
 import { PaginatedQueryResult, TMutationResult } from 'src/types/responses';
 import { TValidationOptions } from 'src/types/validators';
 import RequiredValidator from 'src/validators/RequiredValidator';
+import { createS3ObjectLink } from 'src/utils/createS3ObjectLink';
 import { validate } from 'src/validators';
 import isEmpty from 'src/utils/isEmpty';
 
@@ -153,11 +154,11 @@ export class StatisticsService {
     favEducator[0].userId = undefined;
     favEducator[0].password = undefined;
     favEducator[0].isVerified = undefined;
-    favEducator[0].avatar = this.s3Client.getSignedUrl('getObject', {
-      Key: favEducator[0].avatar,
-      Bucket: this.configService.get('aws.utilityBucketName'),
-    });
-
+    favEducator[0].avatar = createS3ObjectLink(
+      this.configService.get('aws.utilityBucketName'),
+      favEducator[0].avatar,
+    );
+    
     // favCategory
     const favCategoryQuery = `
       SELECT course_sub_type.*, count(course_sub_type.id) AS type_count
@@ -357,15 +358,15 @@ export class StatisticsService {
     });
 
     data.forEach((item) => {
-      item.courseVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
-        Key: item.courseVideo.thumbnailLink,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      item.courseVideo.thumbnailLink = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        item.courseVideo.thumbnailLink,
+      );
 
-      item.course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
-        Key: item.course.creator.avatar,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      item.course.creator.avatar = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        item.course.creator.avatar,
+      );
     });
 
     return {
@@ -398,12 +399,9 @@ export class StatisticsService {
       },
     });
 
-    progress.courseVideo.thumbnailLink = this.s3Client.getSignedUrl(
-      'getObject',
-      {
-        Key: progress.courseVideo.thumbnailLink,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      },
+    progress.courseVideo.thumbnailLink = createS3ObjectLink(
+      this.configService.get('aws.utilityBucketName'),
+      progress.courseVideo.thumbnailLink,
     );
 
     return progress;
@@ -418,10 +416,10 @@ export class StatisticsService {
     });
 
     if (firstVideo) {
-      firstVideo.thumbnailLink = this.s3Client.getSignedUrl('getObject', {
-        Key: firstVideo.thumbnailLink,
-        Bucket: this.configService.get('aws.utilityBucketName'),
-      });
+      firstVideo.thumbnailLink = createS3ObjectLink(
+        this.configService.get('aws.utilityBucketName'),
+        firstVideo.thumbnailLink,
+      );
     }
 
     const totalVideos = await this.courseVideoRepository
@@ -506,10 +504,10 @@ export class StatisticsService {
           course.id,
         );
         if (course.creator.avatar) {
-          course.creator.avatar = this.s3Client.getSignedUrl('getObject', {
-            Key: course.creator.avatar,
-            Bucket: this.configService.get('aws.utilityBucketName'),
-          });
+          course.creator.avatar = createS3ObjectLink(
+            this.configService.get('aws.utilityBucketName'),
+            course.creator.avatar,
+          );
         }
 
         return {
