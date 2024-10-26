@@ -16,4 +16,8 @@ export default () => ({
     videoBucketName: process.env.AWS_VIDEO_BUCKET_NAME,
     utilityBucketName: process.env.AWS_UTILITY_BUCKET_NAME,
   },
+  mailersend: {
+    apiKey: process.env.MAILERSEND_API_KEY,
+    mail: process.env.MAILERSEND_MAIL,
+  },
 });

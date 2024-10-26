@@ -173,7 +173,12 @@ export class UsersService {
         lang === 'pl' ? titleActivationPl : titleActivationEn,
         emailHtmlFunc(input.firstName, code),
       );
-    } catch (error) {}
+    } catch {
+      return {
+        success: false,
+        result: null,
+      }
+    }
 
     return {
       success: true,
@@ -289,7 +294,7 @@ export class UsersService {
           emailHtmlFunc(user.firstName, code),
         );
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         result: null,
@@ -473,7 +478,7 @@ export class UsersService {
         lang === 'pl' ? passwordChangePl : passwordChangeEn,
         emailHtmlFunc(user.firstName, code),
       );
-    } catch (error) {
+    } catch {
       return {
         success: false,
         result: false,
